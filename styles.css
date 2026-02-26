@@ -263,6 +263,102 @@ body {
   margin-bottom: 1.5rem;
 }
 
+/* ========================================
+   Photo Carousel
+   ======================================== */
+.carousel {
+  position: relative;
+  width: 100%;
+  background: var(--gray-900);
+}
+
+.carousel-viewport {
+  position: relative;
+  width: 100%;
+  height: 320px;
+  overflow: hidden;
+  cursor: grab;
+}
+
+.carousel-image {
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  display: block;
+  background: var(--gray-100);
+  transition: opacity .2s ease;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.carousel-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background .2s, transform .15s;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.carousel-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: translateY(-50%) scale(1.1);
+}
+.carousel-prev { left: 10px; }
+.carousel-next { right: 10px; }
+
+.carousel-counter {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.55);
+  color: white;
+  font-size: .75rem;
+  font-weight: 600;
+  padding: .25rem .6rem;
+  border-radius: 999px;
+  z-index: 2;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  letter-spacing: .02em;
+}
+
+.carousel-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0;
+  background: var(--gray-900);
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: background .2s, transform .2s;
+}
+.carousel-dot:hover {
+  background: rgba(255, 255, 255, 0.6);
+}
+.carousel-dot.active {
+  background: var(--primary);
+  transform: scale(1.25);
+}
+
 .property-image {
   width: 100%;
   height: 280px;
@@ -617,6 +713,11 @@ body {
   .start-screen .instructions { font-size: .95rem; }
 
   .property-image { height: 200px; }
+  .carousel-viewport,
+  .carousel-image { height: 220px; }
+  .carousel-btn { width: 34px; height: 34px; font-size: 1.25rem; }
+  .carousel-dots { gap: 5px; padding: 6px 0; }
+  .carousel-dot { width: 7px; height: 7px; }
   .property-stats { grid-template-columns: repeat(3, 1fr); }
 
   .comparison-row { flex-direction: column; gap: .4rem; }

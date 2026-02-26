@@ -12,7 +12,7 @@
   // ---------------------------------------------------------------------------
 
   const DATA_URL = 'properties.json';
-  const STATES = ['All States', 'TN', 'GA', 'AL', 'OH'];
+  let STATES = ['All States']; // populated dynamically from data
   const QUESTION_COUNTS = [5, 10, 15, 20];
   const GRADE_THRESHOLDS = [
     { grade: 'A', max: 5 },
@@ -151,6 +151,16 @@
         throw new Error('Failed to load property data (' + resp.status + ')');
       }
       _allProperties = await resp.json();
+
+      // Build dynamic state list
+      var stateSet = {};
+      _allProperties.forEach(function (p) {
+        if (p.usState) stateSet[p.usState] = (stateSet[p.usState] || 0) + 1;
+      });
+      var sorted = Object.keys(stateSet).sort(function (a, b) {
+        return stateSet[b] - stateSet[a]; // most properties first
+      });
+      STATES = ['All States'].concat(sorted);
     }
 
     // Filter by state if specified
@@ -399,15 +409,96 @@
     // Property card
     var card = el('div', { className: 'property-card' });
 
-    var img = el('img', {
-      className: 'property-image',
-      src: prop.thumbnailUrl || PLACEHOLDER_IMG,
+    // --- Photo carousel ---
+    var images = (prop.imageUrls && prop.imageUrls.length > 0)
+      ? prop.imageUrls
+      : [prop.thumbnailUrl || PLACEHOLDER_IMG];
+    var carouselIdx = 0;
+
+    var carousel = el('div', { className: 'carousel' });
+    var carouselImg = el('img', {
+      className: 'carousel-image',
+      src: images[0] || PLACEHOLDER_IMG,
       alt: prop.displayAddress || 'Property photo',
     });
-    img.addEventListener('error', function () {
-      img.src = PLACEHOLDER_IMG;
+    carouselImg.addEventListener('error', function () {
+      carouselImg.src = PLACEHOLDER_IMG;
     });
-    card.appendChild(img);
+
+    var counter = el('span', { className: 'carousel-counter' },
+      '1 / ' + images.length);
+
+    function updateCarousel() {
+      carouselImg.src = images[carouselIdx] || PLACEHOLDER_IMG;
+      counter.textContent = (carouselIdx + 1) + ' / ' + images.length;
+      var dots = carousel.querySelectorAll('.carousel-dot');
+      for (var d = 0; d < dots.length; d++) {
+        dots[d].className = 'carousel-dot' + (d === carouselIdx ? ' active' : '');
+      }
+    }
+
+    var prevBtn = el('button', {
+      className: 'carousel-btn carousel-prev',
+      onClick: function (e) {
+        e.stopPropagation();
+        carouselIdx = (carouselIdx - 1 + images.length) % images.length;
+        updateCarousel();
+      }
+    }, '\u2039');
+
+    var nextBtn = el('button', {
+      className: 'carousel-btn carousel-next',
+      onClick: function (e) {
+        e.stopPropagation();
+        carouselIdx = (carouselIdx + 1) % images.length;
+        updateCarousel();
+      }
+    }, '\u203A');
+
+    var viewport = el('div', { className: 'carousel-viewport' });
+    viewport.appendChild(carouselImg);
+    if (images.length > 1) {
+      viewport.appendChild(prevBtn);
+      viewport.appendChild(nextBtn);
+      viewport.appendChild(counter);
+    }
+    carousel.appendChild(viewport);
+
+    // Dot indicators
+    if (images.length > 1) {
+      var dotsContainer = el('div', { className: 'carousel-dots' });
+      for (var di = 0; di < Math.min(images.length, 12); di++) {
+        (function (idx) {
+          dotsContainer.appendChild(el('div', {
+            className: 'carousel-dot' + (idx === 0 ? ' active' : ''),
+            onClick: function () {
+              carouselIdx = idx;
+              updateCarousel();
+            }
+          }));
+        })(di);
+      }
+      carousel.appendChild(dotsContainer);
+    }
+
+    // Touch/swipe support
+    var touchStartX = 0;
+    viewport.addEventListener('touchstart', function (e) {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    viewport.addEventListener('touchend', function (e) {
+      var dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) > 40) {
+        if (dx < 0) {
+          carouselIdx = (carouselIdx + 1) % images.length;
+        } else {
+          carouselIdx = (carouselIdx - 1 + images.length) % images.length;
+        }
+        updateCarousel();
+      }
+    }, { passive: true });
+
+    card.appendChild(carousel);
 
     card.appendChild(
       el(
@@ -419,13 +510,21 @@
 
     // Stats grid
     var stats = el('div', { className: 'property-stats' });
+    var lotDisplay = '\u2014';
+    if (prop.lotSize) {
+      if (prop.lotSize >= 43560) {
+        lotDisplay = (prop.lotSize / 43560).toFixed(2) + ' ac';
+      } else {
+        lotDisplay = Math.round(prop.lotSize).toLocaleString() + ' sqft';
+      }
+    }
     var statItems = [
-      ['Beds', prop.beds],
-      ['Baths', prop.baths],
+      ['Beds', prop.beds || '\u2014'],
+      ['Baths', prop.baths || '\u2014'],
       ['Sqft', prop.livingArea ? prop.livingArea.toLocaleString() : '\u2014'],
       ['Year Built', prop.yearBuilt || '\u2014'],
       ['Type', prop.houseType || '\u2014'],
-      ['Lot', prop.lotSize || '\u2014'],
+      ['Lot', lotDisplay],
       ['List Price', formatDollars(prop.salePrice)],
     ];
     statItems.forEach(function (pair) {
@@ -592,11 +691,14 @@
       el('p', null, 'List Price: ' + formatDollars(prop.salePrice))
     );
     if (prop.estimatedMonthlyRent) {
+      var monthlyRent = prop.estimatedMonthlyRent > 5000
+        ? Math.round(prop.estimatedMonthlyRent / 12)
+        : prop.estimatedMonthlyRent;
       reveal.appendChild(
         el(
           'p',
           null,
-          'Est. Monthly Rent: ' + formatDollars(prop.estimatedMonthlyRent)
+          'Est. Monthly Rent: ' + formatDollars(monthlyRent)
         )
       );
     }
