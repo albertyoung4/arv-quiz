@@ -84,6 +84,45 @@
   var GRADE_DIFF_TO_PCT = [0, 12, 28, 45, 65];
 
   // ---------------------------------------------------------------------------
+  // Navigation Config
+  // ---------------------------------------------------------------------------
+
+  var NAV_CONFIG = [
+    { id: 'tech-training', label: 'Tech Training', icon: '\uD83D\uDCBB',
+      items: [
+        { id: 'hubspot',     label: 'Hubspot',     handler: null },
+        { id: 'apv2',        label: 'APv2',         handler: null },
+        { id: 'five9',       label: 'Five9',        handler: null },
+        { id: 'housecanary', label: 'HouseCanary',  handler: null },
+      ]
+    },
+    { id: 'sales-training', label: 'Sales Training', icon: '\uD83D\uDCBC',
+      groups: [
+        { label: 'Basic', items: [
+          { id: 'sales-intro',     label: 'Intro',     handler: null },
+          { id: 'sales-followup',  label: 'Follow Up', handler: null },
+        ]},
+        { label: 'Intermediate', items: [
+          { id: 'sales-access',     label: 'Access',     handler: null },
+          { id: 'sales-motivation', label: 'Motivation', handler: null },
+        ]},
+        { label: 'Advanced', items: [
+          { id: 'sales-price-anchoring', label: 'Price Anchoring', handler: null },
+        ]},
+      ]
+    },
+    { id: 'pricing', label: 'Pricing', icon: '\uD83D\uDCB0',
+      items: [
+        { id: 'arv-training',    label: 'ARV Training',    handler: 'bootArvTraining' },
+        { id: 'reno-training',   label: 'Reno Training',   handler: null },
+        { id: 'investment-math', label: 'Investment Math',  handler: null },
+      ]
+    }
+  ];
+
+  var activeSection = null;
+
+  // ---------------------------------------------------------------------------
   // Presentation Slides (from ARV Mastery PDF)
   // ---------------------------------------------------------------------------
 
@@ -693,35 +732,279 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Header level badge
+  // Navigation
   // ---------------------------------------------------------------------------
 
-  function updateHeaderLevel() {
-    var headerEl = document.getElementById('header-level');
-    if (!headerEl) return;
-    var progress = getProgress();
-    var level = progress.completedModules.length;
-    var info = LEVELS[Math.min(level, LEVELS.length - 1)];
-    headerEl.innerHTML = '';
-    headerEl.className = 'header-level' + (level >= MODULES_COUNT ? ' header-level-complete' : '');
+  function isSectionActive(section) {
+    if (section.items) {
+      for (var i = 0; i < section.items.length; i++) {
+        if (section.items[i].id === activeSection) return true;
+      }
+    }
+    if (section.groups) {
+      for (var g = 0; g < section.groups.length; g++) {
+        for (var i = 0; i < section.groups[g].items.length; i++) {
+          if (section.groups[g].items[i].id === activeSection) return true;
+        }
+      }
+    }
+    return false;
+  }
 
-    var levelText = document.createElement('span');
-    levelText.textContent = info.emoji + ' ' + info.name;
-    headerEl.appendChild(levelText);
+  function closeAllDropdowns() {
+    var all = document.querySelectorAll('.nav-dropdown-open');
+    for (var i = 0; i < all.length; i++) {
+      all[i].classList.remove('nav-dropdown-open');
+      var btn = all[i].querySelector('.nav-trigger');
+      if (btn) btn.setAttribute('aria-expanded', 'false');
+    }
+  }
 
-    // Only show History/Leaderboard buttons if user is signed in
-    if (getEmail()) {
-      var histBtn = document.createElement('button');
-      histBtn.className = 'header-history-btn';
-      histBtn.textContent = '\uD83D\uDCCA History';
-      histBtn.addEventListener('click', function () { renderHistory(); });
-      headerEl.appendChild(histBtn);
+  function closeMobileNav() {
+    var panel = document.getElementById('mobile-nav-panel');
+    var btn = document.getElementById('hamburger-btn');
+    if (panel) panel.classList.remove('mobile-nav-open');
+    if (btn) {
+      btn.classList.remove('hamburger-active');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  }
 
-      var lbBtn = document.createElement('button');
-      lbBtn.className = 'header-history-btn';
-      lbBtn.textContent = '\uD83C\uDFC6 Leaders';
-      lbBtn.addEventListener('click', function () { renderLeaderboard(); });
-      headerEl.appendChild(lbBtn);
+  function createNavItem(item, isMobile) {
+    var isActive = activeSection === item.id;
+    var classes = (isMobile ? 'mobile-nav-item' : 'nav-item') +
+                  (isActive ? ' nav-item-active' : '') +
+                  (!item.handler ? ' nav-item-coming-soon' : '');
+
+    var navItem = el('button', { className: classes }, item.label);
+
+    if (!item.handler) {
+      navItem.appendChild(el('span', { className: 'coming-soon-badge' }, 'Soon'));
+    }
+
+    navItem.addEventListener('click', function (e) {
+      e.stopPropagation();
+      closeMobileNav();
+      closeAllDropdowns();
+      if (!item.handler) {
+        activeSection = item.id;
+        renderNav();
+        renderComingSoon(item.label);
+      } else {
+        navigateTo(item.id, item.handler);
+      }
+    });
+
+    return navItem;
+  }
+
+  function navigateTo(sectionId, handlerName) {
+    activeSection = sectionId;
+    renderNav();
+
+    var handlers = {
+      'bootArvTraining': bootArvTraining,
+    };
+
+    if (handlers[handlerName]) {
+      handlers[handlerName]();
+    }
+  }
+
+  function renderNav() {
+    var nav = document.getElementById('main-nav');
+    var mobilePanel = document.getElementById('mobile-nav-panel');
+    if (!nav) return;
+    nav.innerHTML = '';
+    if (mobilePanel) mobilePanel.innerHTML = '';
+
+    NAV_CONFIG.forEach(function (section) {
+      // --- Desktop dropdown ---
+      var dropdownWrapper = el('div', { className: 'nav-dropdown' });
+      var triggerText = section.icon + ' ' + section.label;
+      var trigger = el('button', {
+        className: 'nav-trigger' + (isSectionActive(section) ? ' nav-trigger-active' : ''),
+      }, triggerText, ' ', el('span', { className: 'nav-chevron' }, '\u25BE'));
+      trigger.setAttribute('aria-haspopup', 'true');
+      trigger.setAttribute('aria-expanded', 'false');
+
+      var panel = el('div', { className: 'nav-panel' });
+
+      if (section.groups) {
+        section.groups.forEach(function (group) {
+          panel.appendChild(el('div', { className: 'nav-group-label' }, group.label));
+          group.items.forEach(function (item) {
+            panel.appendChild(createNavItem(item, false));
+          });
+        });
+      } else if (section.items) {
+        section.items.forEach(function (item) {
+          panel.appendChild(createNavItem(item, false));
+        });
+      }
+
+      trigger.addEventListener('click', function (e) {
+        e.stopPropagation();
+        var isOpen = dropdownWrapper.classList.contains('nav-dropdown-open');
+        closeAllDropdowns();
+        if (!isOpen) {
+          dropdownWrapper.classList.add('nav-dropdown-open');
+          trigger.setAttribute('aria-expanded', 'true');
+        }
+      });
+      dropdownWrapper.addEventListener('mouseleave', function () {
+        dropdownWrapper.classList.remove('nav-dropdown-open');
+        trigger.setAttribute('aria-expanded', 'false');
+      });
+
+      dropdownWrapper.appendChild(trigger);
+      dropdownWrapper.appendChild(panel);
+      nav.appendChild(dropdownWrapper);
+
+      // --- Mobile accordion ---
+      if (mobilePanel) {
+        var mobileSection = el('div', { className: 'mobile-nav-section' });
+        var mobileTrigger = el('button', {
+          className: 'mobile-nav-trigger' + (isSectionActive(section) ? ' mobile-nav-trigger-active' : ''),
+        }, section.icon + ' ' + section.label, ' ', el('span', { className: 'nav-chevron' }, '\u25BE'));
+        var mobileItems = el('div', { className: 'mobile-nav-items' });
+
+        if (section.groups) {
+          section.groups.forEach(function (group) {
+            mobileItems.appendChild(el('div', { className: 'nav-group-label' }, group.label));
+            group.items.forEach(function (item) {
+              mobileItems.appendChild(createNavItem(item, true));
+            });
+          });
+        } else if (section.items) {
+          section.items.forEach(function (item) {
+            mobileItems.appendChild(createNavItem(item, true));
+          });
+        }
+
+        mobileTrigger.addEventListener('click', function () {
+          var isOpen = mobileSection.classList.contains('mobile-section-open');
+          var allSections = mobilePanel.querySelectorAll('.mobile-nav-section');
+          for (var i = 0; i < allSections.length; i++) {
+            allSections[i].classList.remove('mobile-section-open');
+          }
+          if (!isOpen) mobileSection.classList.add('mobile-section-open');
+        });
+
+        mobileSection.appendChild(mobileTrigger);
+        mobileSection.appendChild(mobileItems);
+        mobilePanel.appendChild(mobileSection);
+      }
+    });
+
+    // Wire hamburger
+    var hamburgerBtn = document.getElementById('hamburger-btn');
+    if (hamburgerBtn) {
+      hamburgerBtn.onclick = function () {
+        var isOpen = mobilePanel && mobilePanel.classList.contains('mobile-nav-open');
+        if (mobilePanel) mobilePanel.classList.toggle('mobile-nav-open');
+        hamburgerBtn.classList.toggle('hamburger-active');
+        hamburgerBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+      };
+    }
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function () {
+    closeAllDropdowns();
+  });
+
+  // ---------------------------------------------------------------------------
+  // Coming Soon / Landing Page
+  // ---------------------------------------------------------------------------
+
+  function renderComingSoon(sectionName) {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen coming-soon-screen' });
+    screen.appendChild(el('div', { className: 'coming-soon-icon' }, '\uD83D\uDEA7'));
+    screen.appendChild(el('h1', null, sectionName));
+    screen.appendChild(el('p', { className: 'coming-soon-text' }, 'This training module is coming soon. Check back later!'));
+    screen.appendChild(el('button', {
+      className: 'btn-primary',
+      onClick: function () {
+        activeSection = null;
+        renderNav();
+        renderLandingPage();
+      }
+    }, '\u2190 Back to Home'));
+    app.appendChild(screen);
+  }
+
+  function renderLandingPage() {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen landing-screen' });
+    screen.appendChild(el('h1', null, 'Rebuilt Training'));
+    screen.appendChild(el('p', { className: 'landing-subtitle' }, 'Choose a training program to get started.'));
+
+    var grid = el('div', { className: 'landing-grid' });
+    NAV_CONFIG.forEach(function (section) {
+      var allItems = [];
+      if (section.items) allItems = section.items;
+      if (section.groups) {
+        section.groups.forEach(function (g) {
+          allItems = allItems.concat(g.items);
+        });
+      }
+
+      var card = el('div', { className: 'landing-card' });
+      card.appendChild(el('div', { className: 'landing-card-icon' }, section.icon));
+      card.appendChild(el('h2', null, section.label));
+
+      var list = el('ul', { className: 'landing-card-list' });
+      allItems.forEach(function (item) {
+        var li = el('li', null);
+        li.appendChild(el('span', null, item.label));
+        if (!item.handler) {
+          li.classList.add('landing-item-soon');
+          li.appendChild(el('span', { className: 'coming-soon-badge' }, 'Soon'));
+        } else {
+          var goBtn = el('button', {
+            className: 'landing-go-btn',
+            onClick: function () { navigateTo(item.id, item.handler); }
+          }, 'Start \u2192');
+          li.appendChild(goBtn);
+        }
+        list.appendChild(li);
+      });
+      card.appendChild(list);
+      grid.appendChild(card);
+    });
+
+    screen.appendChild(grid);
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Boot ARV Training
+  // ---------------------------------------------------------------------------
+
+  function bootArvTraining() {
+    activeSection = 'arv-training';
+    renderNav();
+
+    var email = getEmail();
+    if (!email) {
+      renderSignIn();
+    } else if (!isPresentationDone()) {
+      renderPresentation();
+    } else if (!isCompAnalysisDone()) {
+      renderCompIntro();
+    } else {
+      loadProperties().then(function () {
+        var progress = getProgress();
+        if (progress.completedModules.length >= MODULES_COUNT) {
+          renderDiploma();
+        } else {
+          renderDashboard();
+        }
+      }).catch(function () {
+        renderDashboard();
+      });
     }
   }
 
@@ -878,7 +1161,7 @@
 
   function renderSignIn() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen signin-screen' });
 
     screen.appendChild(el('div', { className: 'signin-icon' }, '\uD83C\uDFE0'));
@@ -942,7 +1225,7 @@
 
   function renderPresentation() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var slideIdx = 0;
 
     function renderSlide() {
@@ -1070,7 +1353,7 @@
 
   function renderCompIntro() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen comp-intro-screen' });
 
     screen.appendChild(el('div', { className: 'comp-intro-icon' }, '\uD83D\uDD0D'));
@@ -1201,7 +1484,7 @@
 
   function renderCompScenario() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var scenario = COMP_SCENARIOS[compScenarioIndex];
     var comp = scenario.comps[compQuestionIndex];
     var screen = el('div', { className: 'screen comp-scenario-screen' });
@@ -1342,7 +1625,7 @@
 
   function renderCompScenarioResults() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen comp-results-screen' });
 
     var totalCorrect = 0;
@@ -1435,7 +1718,7 @@
 
   function renderCompSummary() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen comp-summary-screen' });
 
     var totalScore = 0;
@@ -1502,7 +1785,7 @@
 
   function renderDashboard() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen dashboard-screen' });
 
     var progress = getProgress();
@@ -1596,8 +1879,18 @@
       el('p', null, '\uD83C\uDFAF Pass criteria: Average ARV within ' + ARV_PASS_THRESHOLD + '% and Rehab within ' + RENO_PASS_THRESHOLD + '% across all 5 properties in the module.')
     ));
 
-    // View Training button
+    // Context buttons (History, Leaders, View Training)
     var dashActions = el('div', { className: 'dash-actions' });
+    if (getEmail()) {
+      dashActions.appendChild(el('button', {
+        className: 'btn-secondary btn-small',
+        onClick: function () { renderHistory(); }
+      }, '\uD83D\uDCCA History'));
+      dashActions.appendChild(el('button', {
+        className: 'btn-secondary btn-small',
+        onClick: function () { renderLeaderboard(); }
+      }, '\uD83C\uDFC6 Leaders'));
+    }
     dashActions.appendChild(el('button', {
       className: 'btn-secondary btn-small',
       onClick: function () { renderPresentation(); }
@@ -1677,7 +1970,7 @@
 
   function renderQuizQuestion() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var prop = moduleProperties[currentQuestionIndex];
     var screen = el('div', { className: 'screen quiz-screen' });
 
@@ -1970,7 +2263,7 @@
 
   function renderResultScreen(result) {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen results-screen' });
     var prop = result.property;
 
@@ -2097,7 +2390,7 @@
 
   function renderModuleSummary() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen module-summary-screen' });
 
     var avgArvPct = runningArvPctSum / moduleResults.length;
@@ -2203,7 +2496,7 @@
     screen.appendChild(btnRow);
 
     app.appendChild(screen);
-    updateHeaderLevel();
+
   }
 
   // ---------------------------------------------------------------------------
@@ -2212,7 +2505,7 @@
 
   function renderDiploma() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen diploma-screen' });
 
     // Post to Slack (once)
@@ -2270,7 +2563,7 @@
 
   function renderHistory() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen history-screen' });
 
     screen.appendChild(el('h1', null, '\uD83D\uDCCA Attempt History'));
@@ -2353,7 +2646,7 @@
 
   function renderLeaderboard() {
     var app = clearApp();
-    updateHeaderLevel();
+
     var screen = el('div', { className: 'screen history-screen' });
 
     screen.appendChild(el('h1', null, '\uD83C\uDFC6 Leaderboard'));
@@ -2464,25 +2757,16 @@
   // ---------------------------------------------------------------------------
 
   document.addEventListener('DOMContentLoaded', function () {
+    renderNav();
+    // If user has ARV Training progress, boot into ARV Training directly
     var email = getEmail();
-    if (!email) {
-      renderSignIn();
-    } else if (!isPresentationDone()) {
-      renderPresentation();
-    } else if (!isCompAnalysisDone()) {
-      renderCompIntro();
+    if (email && (isPresentationDone() || isCompAnalysisDone())) {
+      bootArvTraining();
+    } else if (email) {
+      // Signed in but no progress - still go to ARV Training (sign-in flow)
+      bootArvTraining();
     } else {
-      // Pre-load properties
-      loadProperties().then(function () {
-        var progress = getProgress();
-        if (progress.completedModules.length >= MODULES_COUNT) {
-          renderDiploma();
-        } else {
-          renderDashboard();
-        }
-      }).catch(function () {
-        renderDashboard();
-      });
+      renderLandingPage();
     }
   });
 
