@@ -740,13 +740,15 @@
     }
 
     var prevBtn = el('button', {
+      type: 'button',
       className: 'carousel-btn carousel-prev',
-      onClick: function (e) { e.stopPropagation(); carouselIdx = (carouselIdx - 1 + images.length) % images.length; updateCarousel(); }
+      onClick: function (e) { e.preventDefault(); e.stopPropagation(); carouselIdx = (carouselIdx - 1 + images.length) % images.length; updateCarousel(); }
     }, '\u2039');
 
     var nextBtn = el('button', {
+      type: 'button',
       className: 'carousel-btn carousel-next',
-      onClick: function (e) { e.stopPropagation(); carouselIdx = (carouselIdx + 1) % images.length; updateCarousel(); }
+      onClick: function (e) { e.preventDefault(); e.stopPropagation(); carouselIdx = (carouselIdx + 1) % images.length; updateCarousel(); }
     }, '\u203A');
 
     var viewport = el('div', { className: 'carousel-viewport' });
@@ -820,6 +822,31 @@
       ));
     });
     card.appendChild(stats);
+
+    // Research links (Zillow + House Canary)
+    var researchLinks = el('div', { className: 'research-links' });
+    researchLinks.appendChild(el('span', { className: 'research-label' }, '\uD83D\uDD0D Research:'));
+
+    // Zillow link — build from address
+    var addr = prop.displayAddress || '';
+    var zillowSlug = addr.replace(/[,#]/g, '').replace(/\s+/g, '-');
+    var zillowUrl = 'https://www.zillow.com/homes/' + encodeURIComponent(zillowSlug) + '_rb/';
+    researchLinks.appendChild(el('a', {
+      href: zillowUrl,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      className: 'research-btn research-zillow',
+    }, '\uD83C\uDFE0 Zillow'));
+
+    // House Canary link
+    researchLinks.appendChild(el('a', {
+      href: 'https://solutions.housecanary.com/pexp/search?',
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      className: 'research-btn research-hc',
+    }, '\uD83D\uDCC8 House Canary'));
+
+    card.appendChild(researchLinks);
     screen.appendChild(card);
 
     // Estimate inputs
