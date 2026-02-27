@@ -1403,12 +1403,16 @@
     _videoTimers = {};
   }
 
-  function renderSalesModule(levelIndex, moduleIndex) {
+  function renderSalesModule(levelIndex, moduleIndex, videoIndex) {
     clearVideoTimers();
     var level = SALES_COURSE[levelIndex];
     var mod = level.modules[moduleIndex];
     var p = getSalesProgress();
     var admin = isAdmin();
+    if (videoIndex === undefined) videoIndex = 0;
+    var v = mod.videos[videoIndex];
+    var watched = p.watchedVideos[level.id] && p.watchedVideos[level.id].indexOf(v.fileId) !== -1;
+
     var app = clearApp();
     var screen = el('div', { className: 'screen sales-module-screen' });
 
@@ -1418,146 +1422,147 @@
       onClick: function () { clearVideoTimers(); renderSalesLevelDash(levelIndex); }
     }, '\u2190 Back to ' + level.title));
 
-    screen.appendChild(el('div', { className: 'sales-module-num' }, 'Module ' + (moduleIndex + 1) + ' of ' + level.modules.length));
+    // Header with progress
+    screen.appendChild(el('div', { className: 'sales-module-num' }, 'Module ' + (moduleIndex + 1) + ' \u00B7 Video ' + (videoIndex + 1) + ' of ' + mod.videos.length));
     screen.appendChild(el('h1', null, mod.title));
     screen.appendChild(el('p', { className: 'sales-module-desc' }, mod.desc));
 
-    // Videos
-    mod.videos.forEach(function (v, vidIdx) {
-      var watched = p.watchedVideos[level.id] && p.watchedVideos[level.id].indexOf(v.fileId) !== -1;
-      var videoCard = el('div', { className: 'sales-video-card' + (watched ? ' watched' : '') });
+    // --- Single Video Card ---
+    var videoCard = el('div', { className: 'sales-video-card' + (watched ? ' watched' : '') });
 
-      var videoTitle = el('div', { className: 'sales-video-title' },
-        (watched ? '\u2705 ' : '\uD83C\uDFAC ') + v.title);
-      videoCard.appendChild(videoTitle);
+    var videoTitle = el('div', { className: 'sales-video-title' },
+      (watched ? '\u2705 ' : '\uD83C\uDFAC ') + v.title);
+    videoCard.appendChild(videoTitle);
 
-      var iframeWrapper = el('div', { className: 'sales-video-wrapper' });
-      var iframe = document.createElement('iframe');
-      iframe.src = 'https://drive.google.com/file/d/' + v.fileId + '/preview';
-      iframe.setAttribute('allow', 'autoplay; encrypted-media');
-      iframe.setAttribute('allowfullscreen', 'true');
-      iframe.setAttribute('frameborder', '0');
-      iframeWrapper.appendChild(iframe);
-      videoCard.appendChild(iframeWrapper);
+    var iframeWrapper = el('div', { className: 'sales-video-wrapper' });
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://drive.google.com/file/d/' + v.fileId + '/preview';
+    iframe.setAttribute('allow', 'autoplay; encrypted-media');
+    iframe.setAttribute('allowfullscreen', 'true');
+    iframe.setAttribute('frameborder', '0');
+    iframeWrapper.appendChild(iframe);
+    videoCard.appendChild(iframeWrapper);
 
-      if (!watched) {
-        // --- Admin: quick bypass ---
-        if (admin) {
-          var adminRow = el('div', { className: 'video-admin-row' });
-          adminRow.appendChild(el('button', {
-            className: 'btn-primary sales-admin-skip-btn',
-            onClick: (function (fid) {
-              return function () {
-                markVideoWatched(level.id, fid);
-                renderSalesModule(levelIndex, moduleIndex);
-              };
-            })(v.fileId)
-          }, '\u26A1 Admin: Mark Watched'));
-          videoCard.appendChild(adminRow);
-        }
-
-        // --- Timer countdown ---
-        var timerEl = el('div', { className: 'video-timer' });
-        videoCard.appendChild(timerEl);
-
-        // --- Check questions section (hidden until timer expires or admin) ---
-        var checkSection = el('div', { className: 'video-check-section' });
-        if (!admin) checkSection.style.display = 'none';
-
-        if (v.checks && v.checks.length > 0) {
-          checkSection.appendChild(el('h3', { className: 'video-check-heading' }, '\uD83E\uDDE0 Comprehension Check'));
-          if (admin) {
-            checkSection.appendChild(el('div', { className: 'admin-answer-banner' },
-              '\uD83D\uDD11 Admin: correct answers highlighted in green'));
+    if (!watched) {
+      // --- Admin: quick bypass ---
+      if (admin) {
+        var adminRow = el('div', { className: 'video-admin-row' });
+        adminRow.appendChild(el('button', {
+          className: 'btn-primary sales-admin-skip-btn',
+          onClick: function () {
+            markVideoWatched(level.id, v.fileId);
+            renderSalesModule(levelIndex, moduleIndex, videoIndex);
           }
-          var checkSelected = {};
-          var checkForm = el('div', { className: 'video-check-form' });
-
-          v.checks.forEach(function (ck, ckIdx) {
-            var qBlock = el('div', { className: 'video-check-q' });
-            qBlock.appendChild(el('p', { className: 'video-check-q-text' }, (ckIdx + 1) + '. ' + ck.q));
-
-            var opts = el('div', { className: 'video-check-opts' });
-            ck.choices.forEach(function (choice, cIdx) {
-              var optLabel = el('label', { className: 'video-check-opt' + (admin && cIdx === ck.answer ? ' admin-highlight-correct' : '') });
-              var radio = document.createElement('input');
-              radio.type = 'radio';
-              radio.name = 'vc-' + vidIdx + '-' + ckIdx;
-              radio.value = cIdx;
-              radio.addEventListener('change', function () { checkSelected[ckIdx] = cIdx; });
-              optLabel.appendChild(radio);
-              optLabel.appendChild(document.createTextNode(' ' + choice));
-              opts.appendChild(optLabel);
-            });
-            qBlock.appendChild(opts);
-            qBlock.appendChild(el('div', { className: 'video-check-feedback', id: 'vcfb-' + vidIdx + '-' + ckIdx }));
-            checkForm.appendChild(qBlock);
-          });
-          checkSection.appendChild(checkForm);
-
-          // Submit check button
-          var checkSubmit = el('button', {
-            className: 'btn-primary video-check-submit',
-            onClick: (function (video, vi, sel, formEl) {
-              return function () {
-                var allCorrect = true;
-                video.checks.forEach(function (ck, ckIdx) {
-                  var fb = document.getElementById('vcfb-' + vi + '-' + ckIdx);
-                  var qBlock = fb.parentNode;
-                  if (sel[ckIdx] === ck.answer) {
-                    fb.textContent = '\u2705 Correct!';
-                    fb.className = 'video-check-feedback correct';
-                    qBlock.classList.remove('incorrect');
-                    qBlock.classList.add('correct');
-                  } else {
-                    allCorrect = false;
-                    fb.textContent = '\u274C Try again';
-                    fb.className = 'video-check-feedback incorrect';
-                    qBlock.classList.remove('correct');
-                    qBlock.classList.add('incorrect');
-                  }
-                });
-                if (allCorrect) {
-                  markVideoWatched(level.id, video.fileId);
-                  // Brief celebration then re-render
-                  var btn = this;
-                  btn.textContent = '\uD83C\uDF89 All correct! Video complete!';
-                  btn.classList.add('check-passed');
-                  btn.disabled = true;
-                  setTimeout(function () {
-                    renderSalesModule(levelIndex, moduleIndex);
-                  }, 1200);
-                }
-              };
-            })(v, vidIdx, checkSelected, checkForm)
-          }, 'Submit Answers');
-          checkSection.appendChild(checkSubmit);
-        }
-
-        videoCard.appendChild(checkSection);
-
-        // Start timer for non-admin users (admin sees checks immediately)
-        if (!admin) {
-          startVideoTimer(v.fileId, timerEl, checkSection);
-        } else {
-          timerEl.style.display = 'none';
-        }
+        }, '\u26A1 Admin: Mark Watched'));
+        videoCard.appendChild(adminRow);
       }
 
-      screen.appendChild(videoCard);
-    });
+      // --- Timer countdown ---
+      var timerEl = el('div', { className: 'video-timer' });
+      videoCard.appendChild(timerEl);
 
-    // Next module button
-    if (moduleIndex < level.modules.length - 1) {
-      screen.appendChild(el('button', {
-        className: 'btn-primary sales-next-btn',
-        onClick: function () { renderSalesModule(levelIndex, moduleIndex + 1); }
-      }, 'Next: ' + level.modules[moduleIndex + 1].title + ' \u2192'));
-    } else {
-      screen.appendChild(el('button', {
-        className: 'btn-primary sales-next-btn',
-        onClick: function () { clearVideoTimers(); renderSalesLevelDash(levelIndex); }
-      }, 'Back to Level Dashboard \u2192'));
+      // --- Check questions section (hidden until timer expires or admin) ---
+      var checkSection = el('div', { className: 'video-check-section' });
+      if (!admin) checkSection.style.display = 'none';
+
+      if (v.checks && v.checks.length > 0) {
+        checkSection.appendChild(el('h3', { className: 'video-check-heading' }, '\uD83E\uDDE0 Comprehension Check'));
+        if (admin) {
+          checkSection.appendChild(el('div', { className: 'admin-answer-banner' },
+            '\uD83D\uDD11 Admin: correct answers highlighted in green'));
+        }
+        var checkSelected = {};
+        var checkForm = el('div', { className: 'video-check-form' });
+
+        v.checks.forEach(function (ck, ckIdx) {
+          var qBlock = el('div', { className: 'video-check-q' });
+          qBlock.appendChild(el('p', { className: 'video-check-q-text' }, (ckIdx + 1) + '. ' + ck.q));
+
+          var opts = el('div', { className: 'video-check-opts' });
+          ck.choices.forEach(function (choice, cIdx) {
+            var optLabel = el('label', { className: 'video-check-opt' + (admin && cIdx === ck.answer ? ' admin-highlight-correct' : '') });
+            var radio = document.createElement('input');
+            radio.type = 'radio';
+            radio.name = 'vc-' + ckIdx;
+            radio.value = cIdx;
+            radio.addEventListener('change', function () { checkSelected[ckIdx] = cIdx; });
+            optLabel.appendChild(radio);
+            optLabel.appendChild(document.createTextNode(' ' + choice));
+            opts.appendChild(optLabel);
+          });
+          qBlock.appendChild(opts);
+          qBlock.appendChild(el('div', { className: 'video-check-feedback', id: 'vcfb-' + ckIdx }));
+          checkForm.appendChild(qBlock);
+        });
+        checkSection.appendChild(checkForm);
+
+        // Submit check button
+        var checkSubmit = el('button', {
+          className: 'btn-primary video-check-submit',
+          onClick: function () {
+            var allCorrect = true;
+            v.checks.forEach(function (ck, ckIdx) {
+              var fb = document.getElementById('vcfb-' + ckIdx);
+              var qBlock = fb.parentNode;
+              if (checkSelected[ckIdx] === ck.answer) {
+                fb.textContent = '\u2705 Correct!';
+                fb.className = 'video-check-feedback correct';
+                qBlock.classList.remove('incorrect');
+                qBlock.classList.add('correct');
+              } else {
+                allCorrect = false;
+                fb.textContent = '\u274C Try again';
+                fb.className = 'video-check-feedback incorrect';
+                qBlock.classList.remove('correct');
+                qBlock.classList.add('incorrect');
+              }
+            });
+            if (allCorrect) {
+              markVideoWatched(level.id, v.fileId);
+              var btn = this;
+              btn.textContent = '\uD83C\uDF89 All correct! Video complete!';
+              btn.classList.add('check-passed');
+              btn.disabled = true;
+              setTimeout(function () {
+                renderSalesModule(levelIndex, moduleIndex, videoIndex);
+              }, 1200);
+            }
+          }
+        }, 'Submit Answers');
+        checkSection.appendChild(checkSubmit);
+      }
+
+      videoCard.appendChild(checkSection);
+
+      // Start timer for non-admin users (admin sees checks immediately)
+      if (!admin) {
+        startVideoTimer(v.fileId, timerEl, checkSection);
+      } else {
+        timerEl.style.display = 'none';
+      }
+    }
+
+    screen.appendChild(videoCard);
+
+    // --- Navigation buttons ---
+    if (watched) {
+      // Video is complete — show next video / next module / back to dashboard
+      if (videoIndex < mod.videos.length - 1) {
+        screen.appendChild(el('button', {
+          className: 'btn-primary sales-next-btn',
+          onClick: function () { renderSalesModule(levelIndex, moduleIndex, videoIndex + 1); }
+        }, 'Next Video: ' + mod.videos[videoIndex + 1].title + ' \u2192'));
+      } else if (moduleIndex < level.modules.length - 1) {
+        screen.appendChild(el('button', {
+          className: 'btn-primary sales-next-btn',
+          onClick: function () { renderSalesModule(levelIndex, moduleIndex + 1, 0); }
+        }, 'Next Module: ' + level.modules[moduleIndex + 1].title + ' \u2192'));
+      } else {
+        screen.appendChild(el('button', {
+          className: 'btn-primary sales-next-btn',
+          onClick: function () { clearVideoTimers(); renderSalesLevelDash(levelIndex); }
+        }, 'Back to Level Dashboard \u2192'));
+      }
     }
 
     app.appendChild(screen);
