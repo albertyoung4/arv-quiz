@@ -11,6 +11,7 @@
   // ---------------------------------------------------------------------------
 
   var DATA_URL = 'properties.json';
+  var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxaB0AOvzkIHhqvJK226aFoZsgdCbF4UWDRmBTw2jdtvBoaNi8pewsSCo_xiBfkuzHQ/exec';
   var MODULES_COUNT = 10;
   var QUESTIONS_PER_MODULE = 5;
   var ARV_PASS_THRESHOLD = 10;   // within 10%
@@ -366,6 +367,12 @@
     return app;
   }
 
+  // Fix S3 URLs with %2F encoded slashes (Firefox compatibility)
+  function fixImageUrl(url) {
+    if (!url) return url;
+    try { return decodeURI(url); } catch (_) { return url; }
+  }
+
   // ---------------------------------------------------------------------------
   // LocalStorage helpers
   // ---------------------------------------------------------------------------
@@ -422,8 +429,27 @@
     var progress = getProgress();
     var level = progress.completedModules.length;
     var info = LEVELS[Math.min(level, LEVELS.length - 1)];
-    headerEl.textContent = info.emoji + ' ' + info.name;
+    headerEl.innerHTML = '';
     headerEl.className = 'header-level' + (level >= MODULES_COUNT ? ' header-level-complete' : '');
+
+    var levelText = document.createElement('span');
+    levelText.textContent = info.emoji + ' ' + info.name;
+    headerEl.appendChild(levelText);
+
+    // Only show History/Leaderboard buttons if user is signed in
+    if (getEmail()) {
+      var histBtn = document.createElement('button');
+      histBtn.className = 'header-history-btn';
+      histBtn.textContent = '\uD83D\uDCCA History';
+      histBtn.addEventListener('click', function () { renderHistory(); });
+      headerEl.appendChild(histBtn);
+
+      var lbBtn = document.createElement('button');
+      lbBtn.className = 'header-history-btn';
+      lbBtn.textContent = '\uD83C\uDFC6 Leaders';
+      lbBtn.addEventListener('click', function () { renderLeaderboard(); });
+      headerEl.appendChild(lbBtn);
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -469,6 +495,61 @@
       var val = parseDollarInput(input.value);
       input.value = !isNaN(val) && val > 0 ? String(Math.round(val)) : '';
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Google Sheets logging
+  // ---------------------------------------------------------------------------
+
+  function logToSheets(moduleIdx, passed, avgArvPct, avgRenoPct, results) {
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+    var grades = results.map(function (r) {
+      return {
+        arvGrade: r.arvGrade || '',
+        renoGrade: r.renoGrade || '',
+      };
+    });
+    var payload = {
+      email: getEmail() || '',
+      dateTime: new Date().toISOString(),
+      module: 'Module ' + (moduleIdx + 1),
+      result: passed ? 'Pass' : 'Fail',
+      avgArvPct: avgArvPct.toFixed(1),
+      avgRenoPct: avgRenoPct.toFixed(1),
+      grades: grades,
+    };
+    try {
+      fetch(SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      });
+    } catch (_) { /* silent fail */ }
+  }
+
+  function fetchHistory(callback) {
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') {
+      callback({ status: 'ok', rows: [] });
+      return;
+    }
+    var cbName = '_sheetsCb' + Date.now();
+    var url = SHEETS_URL + '?callback=' + cbName;
+    window[cbName] = function (data) {
+      delete window[cbName];
+      var script = document.getElementById(cbName);
+      if (script) script.remove();
+      callback(data);
+    };
+    var script = document.createElement('script');
+    script.id = cbName;
+    script.src = url;
+    script.onerror = function () {
+      delete window[cbName];
+      script.remove();
+      callback({ status: 'error', rows: [] });
+    };
+    document.head.appendChild(script);
   }
 
   // ---------------------------------------------------------------------------
@@ -750,6 +831,14 @@
       el('p', null, '\uD83C\uDFAF Pass criteria: Average ARV within ' + ARV_PASS_THRESHOLD + '% and Rehab within ' + RENO_PASS_THRESHOLD + '% across all 5 properties in the module.')
     ));
 
+    // View Training button
+    var dashActions = el('div', { className: 'dash-actions' });
+    dashActions.appendChild(el('button', {
+      className: 'btn-secondary btn-small',
+      onClick: function () { renderPresentation(); }
+    }, '\uD83C\uDF93 View Training Slides'));
+    screen.appendChild(dashActions);
+
     app.appendChild(screen);
   }
 
@@ -833,9 +922,10 @@
     var card = el('div', { className: 'property-card' });
 
     // --- Photo carousel with thumbnails ---
-    var images = (prop.imageUrls && prop.imageUrls.length > 0)
+    var rawImages = (prop.imageUrls && prop.imageUrls.length > 0)
       ? prop.imageUrls
       : [prop.thumbnailUrl || PLACEHOLDER_IMG];
+    var images = rawImages.map(fixImageUrl);
     var carouselIdx = 0;
 
     var carousel = el('div', { className: 'carousel' });
@@ -843,6 +933,8 @@
       className: 'carousel-image',
       src: images[0] || PLACEHOLDER_IMG,
       alt: prop.displayAddress || 'Property photo',
+      referrerpolicy: 'no-referrer',
+      crossorigin: 'anonymous',
     });
     carouselImg.addEventListener('error', function () { carouselImg.src = PLACEHOLDER_IMG; });
 
@@ -895,6 +987,8 @@
             className: 'thumb-img' + (idx === 0 ? ' thumb-active' : ''),
             src: images[idx] || PLACEHOLDER_IMG,
             alt: 'Photo ' + (idx + 1),
+            referrerpolicy: 'no-referrer',
+            crossorigin: 'anonymous',
           });
           thumb.addEventListener('error', function () { thumb.src = PLACEHOLDER_IMG; });
           thumb.addEventListener('click', function () {
@@ -1318,6 +1412,9 @@
     });
     screen.appendChild(table);
 
+    // Log to Google Sheets (always, pass or fail)
+    logToSheets(currentModuleIndex, modulePassed, avgArvPct, avgRenoPct, moduleResults);
+
     // Save progress if passed
     if (modulePassed) {
       var progress = getProgress();
@@ -1397,6 +1494,201 @@
     screen.appendChild(btnRow);
 
     app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: History (Google Sheets logs)
+  // ---------------------------------------------------------------------------
+
+  function renderHistory() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen history-screen' });
+
+    screen.appendChild(el('h1', null, '\uD83D\uDCCA Attempt History'));
+    screen.appendChild(el('p', { className: 'history-subtitle' }, 'All training attempts logged to Google Sheets.'));
+
+    var tableContainer = el('div', { className: 'history-table-container' });
+    tableContainer.appendChild(el('div', { className: 'loading-spinner' }));
+    tableContainer.appendChild(el('p', { style: { textAlign: 'center', color: '#888' } }, 'Loading history...'));
+    screen.appendChild(tableContainer);
+
+    var btnRow = el('div', { className: 'btn-row' });
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderDashboard
+    }, '\u2190 Back to Dashboard'));
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderLeaderboard
+    }, '\uD83C\uDFC6 View Leaderboard'));
+    screen.appendChild(btnRow);
+
+    app.appendChild(screen);
+
+    // Fetch data
+    fetchHistory(function (data) {
+      tableContainer.innerHTML = '';
+      if (!data || !data.rows || data.rows.length === 0) {
+        tableContainer.appendChild(el('div', { className: 'history-empty' },
+          el('p', null, '\uD83D\uDCED No attempts logged yet.'),
+          el('p', { className: 'history-empty-sub' }, 'Complete a module to see your results here.')
+        ));
+        return;
+      }
+
+      var rows = data.rows;
+      // Show most recent first
+      rows.reverse();
+
+      var table = el('div', { className: 'history-table' });
+
+      // Header
+      var header = el('div', { className: 'history-row history-header' });
+      ['Email', 'Date', 'Module', 'Result', 'ARV % Off', 'Reno % Off'].forEach(function (h) {
+        header.appendChild(el('div', { className: 'history-cell' }, h));
+      });
+      table.appendChild(header);
+
+      // Rows
+      rows.forEach(function (row) {
+        var tr = el('div', { className: 'history-row' + (row.Result === 'Pass' ? ' history-pass' : ' history-fail') });
+        var email = row.Email || '';
+        var shortEmail = email.length > 20 ? email.slice(0, 18) + '...' : email;
+        tr.appendChild(el('div', { className: 'history-cell' }, shortEmail));
+
+        var dt = row.DateTime || '';
+        if (dt) {
+          try {
+            var d = new Date(dt);
+            dt = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) + ' ' + d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+          } catch (_) {}
+        }
+        tr.appendChild(el('div', { className: 'history-cell' }, dt));
+        tr.appendChild(el('div', { className: 'history-cell' }, row.Module || ''));
+        tr.appendChild(el('div', { className: 'history-cell ' + (row.Result === 'Pass' ? 'text-good' : 'text-bad') },
+          (row.Result === 'Pass' ? '\u2705 ' : '\u274C ') + (row.Result || '')
+        ));
+        tr.appendChild(el('div', { className: 'history-cell' }, (row['Avg ARV % Off'] || '') + '%'));
+        tr.appendChild(el('div', { className: 'history-cell' }, (row['Avg Reno % Off'] || '') + '%'));
+        table.appendChild(tr);
+      });
+
+      tableContainer.appendChild(table);
+      tableContainer.appendChild(el('p', { className: 'history-count' }, rows.length + ' attempt' + (rows.length !== 1 ? 's' : '') + ' total'));
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Leaderboard
+  // ---------------------------------------------------------------------------
+
+  function renderLeaderboard() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen history-screen' });
+
+    screen.appendChild(el('h1', null, '\uD83C\uDFC6 Leaderboard'));
+    screen.appendChild(el('p', { className: 'history-subtitle' }, 'Best accuracy with at least 25 properties (5 modules). Sorted by average accuracy.'));
+
+    var tableContainer = el('div', { className: 'history-table-container' });
+    tableContainer.appendChild(el('div', { className: 'loading-spinner' }));
+    tableContainer.appendChild(el('p', { style: { textAlign: 'center', color: '#888' } }, 'Loading leaderboard...'));
+    screen.appendChild(tableContainer);
+
+    var btnRow = el('div', { className: 'btn-row' });
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderDashboard
+    }, '\u2190 Back to Dashboard'));
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderHistory
+    }, '\uD83D\uDCCA View History'));
+    screen.appendChild(btnRow);
+
+    app.appendChild(screen);
+
+    // Fetch and compute leaderboard
+    fetchHistory(function (data) {
+      tableContainer.innerHTML = '';
+      if (!data || !data.rows || data.rows.length === 0) {
+        tableContainer.appendChild(el('div', { className: 'history-empty' },
+          el('p', null, '\uD83C\uDFC6 No data yet.'),
+          el('p', { className: 'history-empty-sub' }, 'Complete modules to appear on the leaderboard.')
+        ));
+        return;
+      }
+
+      // Aggregate by email
+      var userMap = {};
+      data.rows.forEach(function (row) {
+        var email = (row.Email || '').toLowerCase().trim();
+        if (!email) return;
+        if (!userMap[email]) {
+          userMap[email] = { email: row.Email, attempts: 0, passes: 0, totalArvPct: 0, totalRenoPct: 0, properties: 0 };
+        }
+        var u = userMap[email];
+        u.attempts++;
+        u.properties += 5; // 5 properties per module attempt
+        if (row.Result === 'Pass') u.passes++;
+        var arvPct = parseFloat(row['Avg ARV % Off']);
+        var renoPct = parseFloat(row['Avg Reno % Off']);
+        if (!isNaN(arvPct)) u.totalArvPct += arvPct;
+        if (!isNaN(renoPct)) u.totalRenoPct += renoPct;
+      });
+
+      // Convert to array, filter for min 25 properties (5 modules)
+      var leaders = [];
+      for (var email in userMap) {
+        var u = userMap[email];
+        if (u.properties >= 25) {
+          u.avgArvPct = u.totalArvPct / u.attempts;
+          u.avgRenoPct = u.totalRenoPct / u.attempts;
+          u.overallPct = (u.avgArvPct + u.avgRenoPct) / 2;
+          u.passRate = Math.round((u.passes / u.attempts) * 100);
+          leaders.push(u);
+        }
+      }
+
+      // Sort by overall accuracy ascending (lower % off = better)
+      leaders.sort(function (a, b) { return a.overallPct - b.overallPct; });
+
+      if (leaders.length === 0) {
+        tableContainer.appendChild(el('div', { className: 'history-empty' },
+          el('p', null, '\uD83C\uDFC6 No qualifying entries yet.'),
+          el('p', { className: 'history-empty-sub' }, 'Need at least 25 properties (5 module attempts) to qualify.')
+        ));
+        return;
+      }
+
+      var table = el('div', { className: 'history-table' });
+
+      // Header
+      var header = el('div', { className: 'history-row history-header leaderboard-header' });
+      ['Rank', 'Name', 'Modules', 'Pass Rate', 'Avg ARV %', 'Avg Reno %', 'Overall'].forEach(function (h) {
+        header.appendChild(el('div', { className: 'history-cell' }, h));
+      });
+      table.appendChild(header);
+
+      // Rows
+      leaders.forEach(function (u, i) {
+        var rank = i + 1;
+        var medal = rank === 1 ? '\uD83E\uDD47' : rank === 2 ? '\uD83E\uDD48' : rank === 3 ? '\uD83E\uDD49' : '';
+        var tr = el('div', { className: 'history-row leaderboard-row' + (rank <= 3 ? ' leaderboard-top' : '') });
+        tr.appendChild(el('div', { className: 'history-cell leaderboard-rank' }, medal + ' ' + rank));
+        var name = u.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+        tr.appendChild(el('div', { className: 'history-cell leaderboard-name' }, name));
+        tr.appendChild(el('div', { className: 'history-cell' }, u.attempts + ''));
+        tr.appendChild(el('div', { className: 'history-cell ' + (u.passRate >= 80 ? 'text-good' : u.passRate >= 50 ? '' : 'text-bad') }, u.passRate + '%'));
+        tr.appendChild(el('div', { className: 'history-cell' }, u.avgArvPct.toFixed(1) + '%'));
+        tr.appendChild(el('div', { className: 'history-cell' }, u.avgRenoPct.toFixed(1) + '%'));
+        tr.appendChild(el('div', { className: 'history-cell leaderboard-overall' }, u.overallPct.toFixed(1) + '%'));
+        table.appendChild(tr);
+      });
+
+      tableContainer.appendChild(table);
+    });
   }
 
   // ---------------------------------------------------------------------------
