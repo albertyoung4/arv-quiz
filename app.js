@@ -52,6 +52,31 @@
     { grade: 'F', max: Infinity },
   ];
 
+  // Modules 0-4: both ARV + Reno are multiple-choice grades
+  // Modules 5-9: only Reno is multiple-choice grades, ARV is dollar input
+  var MC_ARV_CUTOFF = 5; // first 5 modules use MC for ARV
+
+  // Reno grade ranges (A = Great condition / low cost, F = Worst / high cost)
+  var RENO_GRADE_RANGES = [
+    { grade: 'A', label: 'Great',     desc: 'Minimal work needed',  min: 0,      max: 25000 },
+    { grade: 'B', label: 'Good',      desc: 'Light renovation',     min: 25001,  max: 50000 },
+    { grade: 'C', label: 'Average',   desc: 'Moderate renovation',  min: 50001,  max: 75000 },
+    { grade: 'D', label: 'Below Avg', desc: 'Heavy renovation',     min: 75001,  max: 100000 },
+    { grade: 'F', label: 'Worst',     desc: 'Major gut rehab',      min: 100001, max: Infinity },
+  ];
+
+  // ARV grade ranges (A = Great / high value, F = Worst / low value)
+  var ARV_GRADE_RANGES = [
+    { grade: 'A', label: 'Great',     desc: '$200k+',        min: 200001, max: Infinity },
+    { grade: 'B', label: 'Good',      desc: '$150k\u2013$200k', min: 150001, max: 200000 },
+    { grade: 'C', label: 'Average',   desc: '$100k\u2013$150k', min: 100001, max: 150000 },
+    { grade: 'D', label: 'Below Avg', desc: '$50k\u2013$100k',  min: 50001,  max: 100000 },
+    { grade: 'F', label: 'Worst',     desc: 'Under $50k',    min: 0,      max: 50000 },
+  ];
+
+  // Map grade-distance (0-4 steps off) to an equivalent "% off" for scoring
+  var GRADE_DIFF_TO_PCT = [0, 12, 28, 45, 65];
+
   // ---------------------------------------------------------------------------
   // Presentation Slides (from ARV Mastery PDF)
   // ---------------------------------------------------------------------------
@@ -201,6 +226,59 @@
 
   function gradeClass(grade) {
     return 'grade-' + grade.toLowerCase();
+  }
+
+  // --- Multiple-choice grade helpers ---
+
+  function getCorrectGrade(value, ranges) {
+    for (var i = 0; i < ranges.length; i++) {
+      if (value >= ranges[i].min && value <= ranges[i].max) return ranges[i].grade;
+    }
+    return 'F';
+  }
+
+  var GRADE_ORDER = ['A', 'B', 'C', 'D', 'F'];
+
+  function gradeIdx(grade) {
+    var idx = GRADE_ORDER.indexOf(grade);
+    return idx === -1 ? 4 : idx;
+  }
+
+  function gradeDiffPct(userGrade, correctGrade) {
+    var diff = Math.abs(gradeIdx(userGrade) - gradeIdx(correctGrade));
+    return GRADE_DIFF_TO_PCT[Math.min(diff, GRADE_DIFF_TO_PCT.length - 1)];
+  }
+
+  function useArvGrades(moduleIdx) { return moduleIdx < MC_ARV_CUTOFF; }
+  function useRenoGrades() { return true; }
+
+  // Build a row of grade-selection buttons
+  function buildGradeSelector(label, ranges, onSelect) {
+    var group = el('div', { className: 'grade-selector-group' });
+    group.appendChild(el('label', null, label));
+    var options = el('div', { className: 'grade-options' });
+    var selectedBtn = null;
+
+    ranges.forEach(function (range) {
+      var btn = el('button', {
+        type: 'button',
+        className: 'grade-option',
+        onClick: function () {
+          if (selectedBtn) selectedBtn.classList.remove('grade-option-selected');
+          btn.classList.add('grade-option-selected');
+          selectedBtn = btn;
+          onSelect(range.grade);
+        },
+      },
+        el('span', { className: 'grade-option-letter ' + gradeClass(range.grade) }, range.grade),
+        el('span', { className: 'grade-option-label' }, range.label),
+        el('span', { className: 'grade-option-desc' }, range.desc)
+      );
+      options.appendChild(btn);
+    });
+
+    group.appendChild(options);
+    return group;
   }
 
   function shuffleArray(arr) {
@@ -823,12 +901,26 @@
     });
     card.appendChild(stats);
 
-    // Research links (Zillow + House Canary)
+    // Google Maps embed (satellite view)
+    var addr = prop.displayAddress || '';
+    var mapQuery = encodeURIComponent(addr);
+    var mapIframe = el('iframe', {
+      className: 'property-map',
+      src: 'https://maps.google.com/maps?q=' + mapQuery + '&t=k&z=17&ie=UTF8&output=embed',
+      width: '100%',
+      height: '200',
+      style: { border: 'none', display: 'block' },
+      loading: 'lazy',
+      referrerpolicy: 'no-referrer-when-downgrade',
+      allowfullscreen: '',
+    });
+    card.appendChild(mapIframe);
+
+    // Research links (Zillow + House Canary + Street View)
     var researchLinks = el('div', { className: 'research-links' });
     researchLinks.appendChild(el('span', { className: 'research-label' }, '\uD83D\uDD0D Research:'));
 
     // Zillow link — build from address
-    var addr = prop.displayAddress || '';
     var zillowSlug = addr.replace(/[,#]/g, '').replace(/\s+/g, '-');
     var zillowUrl = 'https://www.zillow.com/homes/' + encodeURIComponent(zillowSlug) + '_rb/';
     researchLinks.appendChild(el('a', {
@@ -846,32 +938,58 @@
       className: 'research-btn research-hc',
     }, '\uD83D\uDCC8 House Canary'));
 
+    // Google Street View link
+    var streetViewUrl = 'https://www.google.com/maps/search/' + mapQuery + '/@?layer=c';
+    researchLinks.appendChild(el('a', {
+      href: streetViewUrl,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+      className: 'research-btn research-sv',
+    }, '\uD83D\uDDFA\uFE0F Street View'));
+
     card.appendChild(researchLinks);
     screen.appendChild(card);
 
-    // Estimate inputs
+    // --- Estimate inputs (grade selectors and/or dollar inputs) ---
     var form = el('div', { className: 'estimate-form' });
+    var arvIsGraded = useArvGrades(currentModuleIndex);
+    var renoIsGraded = useRenoGrades(currentModuleIndex);
+    var selectedArvGrade = null;
+    var selectedRenoGrade = null;
+    var arvInput = null;
+    var renoInput = null;
 
-    var arvGroup = el('div', { className: 'input-group' });
-    arvGroup.appendChild(el('label', { for: 'arv-input' }, 'Your ARV Estimate ($)'));
-    var arvInput = el('input', { type: 'text', id: 'arv-input', placeholder: 'e.g. 350000', inputmode: 'numeric', autocomplete: 'off' });
-    setupDollarInput(arvInput);
-    arvGroup.appendChild(arvInput);
-    form.appendChild(arvGroup);
+    if (arvIsGraded) {
+      form.appendChild(buildGradeSelector('ARV Estimate', ARV_GRADE_RANGES, function (g) { selectedArvGrade = g; }));
+    } else {
+      var arvGroup = el('div', { className: 'input-group' });
+      arvGroup.appendChild(el('label', { for: 'arv-input' }, 'Your ARV Estimate ($)'));
+      arvInput = el('input', { type: 'text', id: 'arv-input', placeholder: 'e.g. 350000', inputmode: 'numeric', autocomplete: 'off' });
+      setupDollarInput(arvInput);
+      arvGroup.appendChild(arvInput);
+      form.appendChild(arvGroup);
+    }
 
-    var renoGroup = el('div', { className: 'input-group' });
-    renoGroup.appendChild(el('label', { for: 'reno-input' }, 'Your Reno Estimate ($)'));
-    var renoInput = el('input', { type: 'text', id: 'reno-input', placeholder: 'e.g. 45000', inputmode: 'numeric', autocomplete: 'off' });
-    setupDollarInput(renoInput);
-    renoGroup.appendChild(renoInput);
-    form.appendChild(renoGroup);
+    if (renoIsGraded) {
+      form.appendChild(buildGradeSelector('Renovation Estimate', RENO_GRADE_RANGES, function (g) { selectedRenoGrade = g; }));
+    } else {
+      var renoGroup = el('div', { className: 'input-group' });
+      renoGroup.appendChild(el('label', { for: 'reno-input' }, 'Your Reno Estimate ($)'));
+      renoInput = el('input', { type: 'text', id: 'reno-input', placeholder: 'e.g. 45000', inputmode: 'numeric', autocomplete: 'off' });
+      setupDollarInput(renoInput);
+      renoGroup.appendChild(renoInput);
+      form.appendChild(renoGroup);
+    }
+
+    var gradeError = el('p', { className: 'grade-select-error', style: { display: 'none' } }, 'Please select a grade for each category.');
+    form.appendChild(gradeError);
 
     var submitBtn = el('button', { className: 'btn-primary', onClick: handleSubmit }, 'Submit Estimate');
     form.appendChild(submitBtn);
     screen.appendChild(form);
 
     app.appendChild(screen);
-    arvInput.focus();
+    if (arvInput) arvInput.focus();
 
     function onKeyDown(e) { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }
     document.addEventListener('keydown', onKeyDown);
@@ -879,16 +997,39 @@
 
     function handleSubmit() {
       if (submitted) return;
-      var userArv = parseDollarInput(arvInput.value);
-      var userReno = parseDollarInput(renoInput.value);
-      if (isNaN(userArv) || userArv <= 0) { arvInput.classList.add('input-error'); arvInput.focus(); return; }
-      if (isNaN(userReno) || userReno <= 0) { renoInput.classList.add('input-error'); renoInput.focus(); return; }
+
+      var userArv = null, userReno = null;
+      var userArvGrade = null, userRenoGrade = null;
+      var correctArvGrade = null, correctRenoGrade = null;
+      var arvPct, renoPct;
+
+      // --- ARV ---
+      if (arvIsGraded) {
+        if (!selectedArvGrade) { gradeError.style.display = 'block'; return; }
+        userArvGrade = selectedArvGrade;
+        correctArvGrade = getCorrectGrade(prop.estimatedArv, ARV_GRADE_RANGES);
+        arvPct = gradeDiffPct(userArvGrade, correctArvGrade);
+      } else {
+        userArv = parseDollarInput(arvInput.value);
+        if (isNaN(userArv) || userArv <= 0) { arvInput.classList.add('input-error'); arvInput.focus(); return; }
+        arvPct = pctDiff(userArv, prop.estimatedArv);
+      }
+
+      // --- Reno ---
+      if (renoIsGraded) {
+        if (!selectedRenoGrade) { gradeError.style.display = 'block'; return; }
+        userRenoGrade = selectedRenoGrade;
+        correctRenoGrade = getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES);
+        renoPct = gradeDiffPct(userRenoGrade, correctRenoGrade);
+      } else {
+        userReno = parseDollarInput(renoInput.value);
+        if (isNaN(userReno) || userReno <= 0) { renoInput.classList.add('input-error'); renoInput.focus(); return; }
+        renoPct = pctDiff(userReno, prop.estimatedRenovation);
+      }
 
       submitted = true;
       document.removeEventListener('keydown', onKeyDown);
 
-      var arvPct = pctDiff(userArv, prop.estimatedArv);
-      var renoPct = pctDiff(userReno, prop.estimatedRenovation);
       var arvGrade = letterGrade(arvPct);
       var renoGrade = letterGrade(renoPct);
 
@@ -899,10 +1040,16 @@
         property: prop,
         userArv: userArv,
         userReno: userReno,
+        userArvGrade: userArvGrade,
+        userRenoGrade: userRenoGrade,
+        correctArvGrade: correctArvGrade,
+        correctRenoGrade: correctRenoGrade,
         arvPct: arvPct,
         renoPct: renoPct,
         arvGrade: arvGrade,
         renoGrade: renoGrade,
+        arvIsGraded: arvIsGraded,
+        renoIsGraded: renoIsGraded,
       };
       moduleResults.push(result);
       renderResultScreen(result);
@@ -925,9 +1072,17 @@
     screen.appendChild(el('h2', null, prop.displayAddress));
 
     // ARV comparison
-    screen.appendChild(buildComparison('ARV Estimate', result.userArv, prop.estimatedArv, result.arvPct, result.arvGrade));
+    if (result.arvIsGraded) {
+      screen.appendChild(buildGradeCompResult('ARV Estimate', result.userArvGrade, result.correctArvGrade, prop.estimatedArv, result.arvPct, result.arvGrade));
+    } else {
+      screen.appendChild(buildComparison('ARV Estimate', result.userArv, prop.estimatedArv, result.arvPct, result.arvGrade));
+    }
     // Reno comparison
-    screen.appendChild(buildComparison('Renovation Estimate', result.userReno, prop.estimatedRenovation, result.renoPct, result.renoGrade));
+    if (result.renoIsGraded) {
+      screen.appendChild(buildGradeCompResult('Renovation Estimate', result.userRenoGrade, result.correctRenoGrade, prop.estimatedRenovation, result.renoPct, result.renoGrade));
+    } else {
+      screen.appendChild(buildComparison('Renovation Estimate', result.userReno, prop.estimatedRenovation, result.renoPct, result.renoGrade));
+    }
 
     // Reveal info (no list price on quiz screen, but show it in results)
     var reveal = el('div', { className: 'answer-reveal' });
@@ -999,6 +1154,35 @@
     return comp;
   }
 
+  function buildGradeCompResult(label, userGrade, correctGrade, actualValue, pctOff, accuracyGrade) {
+    var isMatch = userGrade === correctGrade;
+    var stepsOff = Math.abs(gradeIdx(userGrade) - gradeIdx(correctGrade));
+
+    var comp = el('div', { className: 'result-comparison' });
+    comp.appendChild(el('h3', null, label));
+    var row = el('div', { className: 'comparison-row grade-comparison-row' });
+
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Your Grade'),
+      el('span', { className: 'grade-badge ' + gradeClass(userGrade) }, userGrade)
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Correct Grade'),
+      el('span', { className: 'grade-badge ' + gradeClass(correctGrade) }, correctGrade)
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Actual Value'),
+      el('span', { className: 'comp-value' }, formatDollars(actualValue))
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, isMatch ? 'Exact Match!' : stepsOff + ' grade' + (stepsOff > 1 ? 's' : '') + ' off'),
+      el('span', { className: 'grade-badge ' + gradeClass(accuracyGrade) }, accuracyGrade)
+    ));
+
+    comp.appendChild(row);
+    return comp;
+  }
+
   // ---------------------------------------------------------------------------
   // Screen: Module Summary (pass/fail)
   // ---------------------------------------------------------------------------
@@ -1041,9 +1225,20 @@
 
     // Breakdown table
     screen.appendChild(el('h3', null, 'Property Breakdown'));
+    var firstR = moduleResults[0] || {};
+    var arvGraded = firstR.arvIsGraded;
+    var renoGraded = firstR.renoIsGraded;
+
     var table = el('div', { className: 'breakdown-table' });
     var header = el('div', { className: 'breakdown-row breakdown-header' });
-    ['Property', 'Your ARV', 'Actual ARV', 'ARV %', 'Your Reno', 'Actual Reno', 'Reno %'].forEach(function (h) {
+    var cols = ['Property'];
+    cols.push(arvGraded ? 'Your ARV' : 'Your ARV');
+    cols.push(arvGraded ? 'Correct' : 'Actual ARV');
+    cols.push('ARV %');
+    cols.push(renoGraded ? 'Your Reno' : 'Your Reno');
+    cols.push(renoGraded ? 'Correct' : 'Actual Reno');
+    cols.push('Reno %');
+    cols.forEach(function (h) {
       header.appendChild(el('div', { className: 'breakdown-cell' }, h));
     });
     table.appendChild(header);
@@ -1053,12 +1248,31 @@
       var addr = r.property.displayAddress || '\u2014';
       var shortAddr = addr.length > 25 ? addr.slice(0, 23) + '...' : addr;
       row.appendChild(el('div', { className: 'breakdown-cell breakdown-address' }, shortAddr));
-      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv)));
-      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedArv)));
+
+      // ARV columns
+      if (r.arvIsGraded) {
+        row.appendChild(el('div', { className: 'breakdown-cell' },
+          el('span', { className: 'mini-grade ' + gradeClass(r.userArvGrade) }, r.userArvGrade)));
+        row.appendChild(el('div', { className: 'breakdown-cell' },
+          el('span', { className: 'mini-grade ' + gradeClass(r.correctArvGrade) }, r.correctArvGrade)));
+      } else {
+        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv)));
+        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedArv)));
+      }
       row.appendChild(el('div', { className: 'breakdown-cell ' + (r.arvPct <= ARV_PASS_THRESHOLD ? 'text-good' : 'text-bad') }, r.arvPct.toFixed(1) + '%'));
-      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userReno)));
-      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedRenovation)));
+
+      // Reno columns
+      if (r.renoIsGraded) {
+        row.appendChild(el('div', { className: 'breakdown-cell' },
+          el('span', { className: 'mini-grade ' + gradeClass(r.userRenoGrade) }, r.userRenoGrade)));
+        row.appendChild(el('div', { className: 'breakdown-cell' },
+          el('span', { className: 'mini-grade ' + gradeClass(r.correctRenoGrade) }, r.correctRenoGrade)));
+      } else {
+        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userReno)));
+        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedRenovation)));
+      }
       row.appendChild(el('div', { className: 'breakdown-cell ' + (r.renoPct <= RENO_PASS_THRESHOLD ? 'text-good' : 'text-bad') }, r.renoPct.toFixed(1) + '%'));
+
       table.appendChild(row);
     });
     screen.appendChild(table);
