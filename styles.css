@@ -1365,6 +1365,10 @@ body {
   .grade-option-letter { width: 30px; height: 30px; font-size: .85rem; }
   .grade-option-label { font-size: .7rem; }
   .grade-option-desc { font-size: .6rem; }
+
+  .comp-cards-row { flex-direction: column; }
+  .comp-cards-row .comp-vs-divider { padding: 0; margin: .5rem 0; }
+  .comp-cards-row .property-stats { grid-template-columns: repeat(3, 1fr); }
 }
 
 /* ========================================
@@ -1635,6 +1639,61 @@ body {
   margin: .5rem 0;
   text-transform: uppercase;
   letter-spacing: .08em;
+}
+
+/* Side-by-side card layout */
+.comp-cards-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin-bottom: .75rem;
+}
+.comp-cards-row .comp-subject-card,
+.comp-cards-row .comp-potential-card {
+  flex: 1;
+  min-width: 0;
+  margin-bottom: 0;
+}
+.comp-cards-row .comp-vs-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 .5rem;
+  margin: 0;
+  flex-shrink: 0;
+}
+.comp-cards-row .property-stats {
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  padding: .5rem .75rem 1rem;
+}
+
+/* Admin answer highlighting */
+.admin-answer-banner {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  margin: .75rem 0 .5rem;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  border: 1px solid #f59e0b;
+  border-radius: 6px;
+  font-size: .8rem;
+  font-weight: 600;
+  color: #92400e;
+}
+.admin-answer-icon {
+  font-size: 1rem;
+}
+.admin-highlight-correct {
+  background: rgba(34, 197, 94, .12) !important;
+  border-color: #22c55e !important;
+  box-shadow: inset 3px 0 0 #22c55e;
+}
+.admin-highlight-good {
+  background: rgba(34, 197, 94, .12) !important;
+  border-color: #22c55e !important;
+  color: #16a34a !important;
+  box-shadow: inset 3px 0 0 #22c55e;
 }
 
 /* Issues form (checkboxes) */

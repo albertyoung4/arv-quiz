@@ -23,6 +23,15 @@
   var STORAGE_PROP_ORDER = 'rebuilt_arv_prop_order';
   var STORAGE_COMP_DONE = 'rebuilt_arv_comp_done';
 
+  var ADMIN_EMAILS = [
+    'al@rebuilt.com',
+    'aj.androkites@rebuilt.com',
+    'brandon@rebuilt.com',
+    'scott@rebuilt.com',
+    'mike.spalding@rebuilt.com',
+    'james.newgent@rebuilt.com',
+  ];
+
   var PLACEHOLDER_IMG =
     'data:image/svg+xml,' +
     encodeURIComponent(
@@ -636,6 +645,11 @@
     try { localStorage.setItem(STORAGE_EMAIL, email); } catch (_) {}
   }
 
+  function isAdmin() {
+    var email = getEmail().toLowerCase().trim();
+    return ADMIN_EMAILS.indexOf(email) !== -1;
+  }
+
   function getProgress() {
     try {
       var p = JSON.parse(localStorage.getItem(STORAGE_PROGRESS) || '{}');
@@ -1202,9 +1216,11 @@
     bar.appendChild(el('div', { className: 'progress-fill', style: { width: pct + '%' } }));
     screen.appendChild(bar);
 
-    screen.appendChild(buildSubjectCard(scenario.subject));
-    screen.appendChild(el('div', { className: 'comp-vs-divider' }, el('span', null, 'vs')));
-    screen.appendChild(buildCompCard(comp));
+    var cardsRow = el('div', { className: 'comp-cards-row' });
+    cardsRow.appendChild(buildSubjectCard(scenario.subject));
+    cardsRow.appendChild(el('div', { className: 'comp-vs-divider' }, el('span', null, 'vs')));
+    cardsRow.appendChild(buildCompCard(comp));
+    screen.appendChild(cardsRow);
 
     var form = el('div', { className: 'comp-issues-form' });
     form.appendChild(el('h3', null, 'What\u2019s wrong with this comp?'));
@@ -1246,6 +1262,25 @@
       },
     }, '\u2705 Good Comp \u2014 No Issues');
     form.appendChild(goodCompBtn);
+
+    // Admin answer highlighting
+    if (isAdmin()) {
+      var correctIssueIds = comp.issues;
+      var isGood = correctIssueIds.length === 0;
+      form.appendChild(el('div', { className: 'admin-answer-banner' },
+        el('span', { className: 'admin-answer-icon' }, '\uD83D\uDD11'),
+        el('span', null, 'Admin View \u2014 Correct answer shown below')
+      ));
+      COMP_ISSUES.forEach(function (issue, idx) {
+        var label = checkboxes[idx].parentNode;
+        if (correctIssueIds.indexOf(issue.id) !== -1) {
+          label.classList.add('admin-highlight-correct');
+        }
+      });
+      if (isGood) {
+        goodCompBtn.classList.add('admin-highlight-good');
+      }
+    }
 
     var errorMsg = el('p', { className: 'comp-error', style: { display: 'none' } },
       'Please select at least one issue or mark as Good Comp.');
