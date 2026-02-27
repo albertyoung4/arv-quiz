@@ -934,7 +934,6 @@
       src: images[0] || PLACEHOLDER_IMG,
       alt: prop.displayAddress || 'Property photo',
       referrerpolicy: 'no-referrer',
-      crossorigin: 'anonymous',
     });
     carouselImg.addEventListener('error', function () { carouselImg.src = PLACEHOLDER_IMG; });
 
@@ -988,7 +987,6 @@
             src: images[idx] || PLACEHOLDER_IMG,
             alt: 'Photo ' + (idx + 1),
             referrerpolicy: 'no-referrer',
-            crossorigin: 'anonymous',
           });
           thumb.addEventListener('error', function () { thumb.src = PLACEHOLDER_IMG; });
           thumb.addEventListener('click', function () {
