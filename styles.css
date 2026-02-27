@@ -293,6 +293,44 @@ body {
   color: var(--gray-400);
 }
 
+/* ---- Materials Library ---- */
+.materials-screen { max-width: 960px; margin: 0 auto; }
+.materials-subtitle { color: var(--gray-500); margin-bottom: 2rem; font-size: 1.05rem; }
+.materials-level-section { margin-bottom: 2.5rem; }
+.materials-level-title { font-size: 1.3rem; margin-bottom: .2rem; }
+.materials-level-sub { color: var(--gray-500); font-size: .9rem; margin-bottom: 1rem; }
+.materials-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1.25rem;
+}
+.materials-card {
+  background: white; border: 1px solid var(--gray-200); border-radius: 12px;
+  overflow: hidden; cursor: pointer; transition: box-shadow .2s, transform .15s;
+  box-shadow: var(--shadow);
+}
+.materials-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.1); transform: translateY(-2px); }
+.materials-thumb {
+  position: relative; width: 100%; padding-top: 56.25%; background: var(--gray-100); overflow: hidden;
+}
+.materials-thumb img {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
+}
+.materials-play-icon {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 48px; height: 48px; background: rgba(0,0,0,.55); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: white; font-size: 1.2rem; padding-left: 3px; transition: background .2s;
+}
+.materials-card:hover .materials-play-icon { background: var(--primary); }
+.materials-info { padding: .85rem 1rem 1rem; }
+.materials-video-title { font-size: .95rem; font-weight: 700; margin-bottom: .35rem; line-height: 1.3; }
+.materials-video-desc { font-size: .8rem; color: var(--gray-500); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.materials-viewer-screen { max-width: 800px; margin: 0 auto; }
+.materials-breadcrumb { color: var(--gray-500); font-size: .85rem; margin-bottom: .25rem; }
+.materials-viewer-desc { margin-top: 1.5rem; padding: 1rem; background: var(--gray-50); border-radius: 8px; }
+.materials-viewer-desc h3 { font-size: 1rem; margin-bottom: .35rem; }
+.materials-viewer-desc p { color: var(--gray-500); font-size: .9rem; line-height: 1.5; }
+.diploma-scores { font-size: .85rem; color: var(--gray-500); letter-spacing: .02em; }
+
 /* ---- Coming Soon Screen ---- */
 .coming-soon-screen {
   text-align: center;

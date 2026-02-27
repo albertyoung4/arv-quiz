@@ -115,6 +115,11 @@
         { id: 'reno-training',   label: 'Reno Training',   handler: null },
         { id: 'investment-math', label: 'Investment Math',  handler: null },
       ]
+    },
+    { id: 'materials', label: 'Materials', icon: '\uD83D\uDCDA',
+      items: [
+        { id: 'materials-library', label: 'Video Library', handler: 'renderMaterials' },
+      ]
     }
   ];
 
@@ -1038,6 +1043,7 @@
       'bootSalesLevel1': bootSalesLevel1,
       'bootSalesLevel2': bootSalesLevel2,
       'bootSalesLevel3': bootSalesLevel3,
+      'renderMaterials': renderMaterials,
     };
 
     if (handlers[handlerName]) {
@@ -1623,6 +1629,16 @@
     var level = SALES_COURSE[levelIndex];
     var questions = level.quiz;
     var passed = score >= 7;
+
+    // Log to Google Sheets
+    logSalesToSheets(level.id, level.title, passed, score);
+
+    // Check if all levels passed → show diploma
+    if (passed && allSalesLevelsPassed()) {
+      renderSalesDiploma();
+      return;
+    }
+
     var app = clearApp();
     var screen = el('div', { className: 'screen sales-results-screen' });
 
@@ -1667,6 +1683,186 @@
         onClick: function () { renderSalesQuiz(levelIndex); }
       }, '\uD83D\uDD04 Retake Assessment'));
     }
+
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sales Diploma (shown after all 3 levels passed)
+  // ---------------------------------------------------------------------------
+
+  var STORAGE_SALES_SLACK_POSTED = 'rebuilt_sales_slack_posted';
+
+  function allSalesLevelsPassed() {
+    var p = getSalesProgress();
+    for (var i = 0; i < SALES_COURSE.length; i++) {
+      if (!p.quizScores[SALES_COURSE[i].id] || p.quizScores[SALES_COURSE[i].id] < 7) return false;
+    }
+    return true;
+  }
+
+  function postSalesDiplomaToSlack() {
+    try { if (localStorage.getItem(STORAGE_SALES_SLACK_POSTED) === 'true') return; } catch (_) {}
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+    var email = getEmail() || '';
+    var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+    try {
+      fetch(SHEETS_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({ action: 'slackSalesDiploma', name: name, email: email }),
+      });
+      localStorage.setItem(STORAGE_SALES_SLACK_POSTED, 'true');
+    } catch (_) {}
+  }
+
+  function logSalesToSheets(levelId, levelTitle, passed, score) {
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+    try {
+      fetch(SHEETS_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'salesTraining',
+          email: getEmail() || '',
+          dateTime: new Date().toISOString(),
+          level: levelTitle,
+          result: passed ? 'Pass' : 'Fail',
+          score: score + '/10',
+        }),
+      });
+    } catch (_) {}
+  }
+
+  function renderSalesDiploma() {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen diploma-screen' });
+
+    postSalesDiplomaToSlack();
+
+    var email = getEmail();
+    var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+
+    // Gather scores
+    var p = getSalesProgress();
+    var scoreLines = SALES_COURSE.map(function (lvl) {
+      return lvl.title + ': ' + (p.quizScores[lvl.id] || 0) + '/10';
+    }).join('  |  ');
+
+    screen.appendChild(el('div', { className: 'diploma-frame' },
+      el('div', { className: 'diploma-inner' },
+        el('div', { className: 'diploma-top-accent' }),
+        el('p', { className: 'diploma-org' }, 'Rebuilt Realty'),
+        el('h1', { className: 'diploma-title' }, 'Certificate of Completion'),
+        el('div', { className: 'diploma-divider' }),
+        el('p', { className: 'diploma-awarded' }, 'This certifies that'),
+        el('h2', { className: 'diploma-name' }, name),
+        el('p', { className: 'diploma-achievement' }, 'has successfully completed all 3 levels of the'),
+        el('h3', { className: 'diploma-program' }, 'Sales Training Program'),
+        el('p', { className: 'diploma-subtitle' }, 'and is hereby recognized as a'),
+        el('div', { className: 'diploma-badge' }, '\uD83C\uDFC6'),
+        el('h2', { className: 'diploma-level' }, 'Rebuilt Certified Sales Pro'),
+        el('p', { className: 'diploma-scores' }, scoreLines),
+        el('div', { className: 'diploma-divider' }),
+        el('p', { className: 'diploma-date' }, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })),
+        el('p', { className: 'diploma-email' }, email)
+      )
+    ));
+
+    screen.appendChild(el('div', { className: 'diploma-cta' },
+      el('p', { className: 'diploma-instruction' }, '\uD83C\uDF89 Your achievement has been posted to #praisewall!'),
+      el('p', { className: 'diploma-subtext' }, 'The team knows you\u2019re a certified Sales Pro.')
+    ));
+
+    var btnRow = el('div', { className: 'btn-row' });
+    btnRow.appendChild(el('button', {
+      className: 'btn-primary',
+      onClick: function () { renderLandingPage(); }
+    }, '\uD83C\uDFE0 Back to Training Home'));
+    screen.appendChild(btnRow);
+
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Materials Library — browse all training videos
+  // ---------------------------------------------------------------------------
+
+  function renderMaterials() {
+    activeSection = 'materials-library';
+    renderNav();
+    var app = clearApp();
+    var screen = el('div', { className: 'screen materials-screen' });
+
+    screen.appendChild(el('h1', null, '\uD83D\uDCDA Training Materials Library'));
+    screen.appendChild(el('p', { className: 'materials-subtitle' }, 'Browse all training videos across the Sales Training curriculum.'));
+
+    SALES_COURSE.forEach(function (level, levelIdx) {
+      var section = el('div', { className: 'materials-level-section' });
+      section.appendChild(el('h2', { className: 'materials-level-title' }, level.icon + ' ' + level.title));
+      section.appendChild(el('p', { className: 'materials-level-sub' }, level.subtitle));
+
+      var grid = el('div', { className: 'materials-grid' });
+
+      level.modules.forEach(function (mod) {
+        mod.videos.forEach(function (v) {
+          var card = el('div', { className: 'materials-card' });
+
+          // Thumbnail from Google Drive
+          var thumb = el('div', { className: 'materials-thumb' });
+          var img = document.createElement('img');
+          img.src = 'https://drive.google.com/thumbnail?id=' + v.fileId + '&sz=w400';
+          img.alt = v.title;
+          img.loading = 'lazy';
+          thumb.appendChild(img);
+          // Play overlay
+          thumb.appendChild(el('div', { className: 'materials-play-icon' }, '\u25B6'));
+          card.appendChild(thumb);
+
+          var info = el('div', { className: 'materials-info' });
+          info.appendChild(el('h3', { className: 'materials-video-title' }, v.title));
+          info.appendChild(el('p', { className: 'materials-video-desc' }, mod.title + ' \u2014 ' + mod.desc));
+          card.appendChild(info);
+
+          card.addEventListener('click', function () {
+            renderMaterialViewer(v, level, mod);
+          });
+
+          grid.appendChild(card);
+        });
+      });
+
+      section.appendChild(grid);
+      screen.appendChild(section);
+    });
+
+    app.appendChild(screen);
+  }
+
+  function renderMaterialViewer(video, level, mod) {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen materials-viewer-screen' });
+
+    screen.appendChild(el('button', {
+      className: 'btn-secondary sales-back-btn',
+      onClick: function () { renderMaterials(); }
+    }, '\u2190 Back to Materials'));
+
+    screen.appendChild(el('p', { className: 'materials-breadcrumb' }, level.icon + ' ' + level.title + ' \u203A ' + mod.title));
+    screen.appendChild(el('h1', null, video.title));
+
+    var iframeWrap = el('div', { className: 'sales-video-iframe-wrap' });
+    var iframe = document.createElement('iframe');
+    iframe.src = 'https://drive.google.com/file/d/' + video.fileId + '/preview';
+    iframe.setAttribute('allowfullscreen', '');
+    iframe.setAttribute('allow', 'autoplay');
+    iframeWrap.appendChild(iframe);
+    screen.appendChild(iframeWrap);
+
+    screen.appendChild(el('div', { className: 'materials-viewer-desc' },
+      el('h3', null, mod.title),
+      el('p', null, mod.desc)
+    ));
 
     app.appendChild(screen);
   }
