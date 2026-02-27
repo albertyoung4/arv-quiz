@@ -2092,11 +2092,41 @@
           return;
         }
         setEmail(email);
+        // If this user already has local progress, go straight through
         if (isPresentationDone()) {
-          renderDashboard();
-        } else {
-          renderPresentation();
+          if (isCompAnalysisDone()) { renderDashboard(); } else { renderCompIntro(); }
+          return;
         }
+        // Check Google Sheet for prior history to let returning users skip
+        submitBtn.textContent = 'Checking...';
+        submitBtn.disabled = true;
+        fetchHistory(function (data) {
+          var rows = (data && data.rows) || [];
+          var userRows = rows.filter(function (r) {
+            return r.Email && r.Email.toLowerCase() === email.toLowerCase();
+          });
+          if (userRows.length > 0) {
+            // Returning user — restore progress from sheet
+            setPresentationDone();
+            setCompAnalysisDone();
+            var passedModules = [];
+            userRows.forEach(function (r) {
+              if (r.Result === 'Pass' && r.Module && r.Module.indexOf('Module') === 0) {
+                var num = parseInt(r.Module.replace('Module ', ''), 10);
+                if (!isNaN(num) && passedModules.indexOf(num) === -1) {
+                  passedModules.push(num);
+                }
+              }
+            });
+            if (passedModules.length > 0) {
+              saveProgress({ completedModules: passedModules });
+            }
+            loadProperties().then(function () { renderDashboard(); }).catch(function () { renderDashboard(); });
+          } else {
+            // Brand-new user
+            renderPresentation();
+          }
+        });
       }
     }, 'Start Training');
 
