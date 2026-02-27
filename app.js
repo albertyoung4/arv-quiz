@@ -1086,10 +1086,8 @@
           trigger.setAttribute('aria-expanded', 'true');
         }
       });
-      dropdownWrapper.addEventListener('mouseleave', function () {
-        dropdownWrapper.classList.remove('nav-dropdown-open');
-        trigger.setAttribute('aria-expanded', 'false');
-      });
+      // Stop clicks inside the panel from bubbling to the document close handler
+      panel.addEventListener('click', function (e) { e.stopPropagation(); });
 
       dropdownWrapper.appendChild(trigger);
       dropdownWrapper.appendChild(panel);
