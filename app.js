@@ -1,7 +1,6 @@
 // =============================================================================
-// Rebuilt ARV Training - app.js
-// Real estate acquisitions training: ARV & renovation cost estimation
-// Uses pre-loaded off-market property data from the Rebuilt marketplace
+// Rebuilt ARV Training Platform - v3
+// Module-based training with sign-in, presentation, progress tracking
 // =============================================================================
 
 (function () {
@@ -11,18 +10,18 @@
   // Constants
   // ---------------------------------------------------------------------------
 
-  const DATA_URL = 'properties.json';
-  let STATES = ['All States']; // populated dynamically from data
-  const QUESTION_COUNTS = [5, 10, 15, 20];
-  const GRADE_THRESHOLDS = [
-    { grade: 'A', max: 5 },
-    { grade: 'B', max: 10 },
-    { grade: 'C', max: 20 },
-    { grade: 'D', max: 35 },
-    { grade: 'F', max: Infinity },
-  ];
-  const HISTORY_KEY = 'rebuilt_arv_training_history';
-  const PLACEHOLDER_IMG =
+  var DATA_URL = 'properties.json';
+  var MODULES_COUNT = 10;
+  var QUESTIONS_PER_MODULE = 5;
+  var ARV_PASS_THRESHOLD = 10;   // within 10%
+  var RENO_PASS_THRESHOLD = 20;  // within 20%
+
+  var STORAGE_EMAIL = 'rebuilt_arv_email';
+  var STORAGE_PROGRESS = 'rebuilt_arv_progress';
+  var STORAGE_PRES = 'rebuilt_arv_pres_done';
+  var STORAGE_PROP_ORDER = 'rebuilt_arv_prop_order';
+
+  var PLACEHOLDER_IMG =
     'data:image/svg+xml,' +
     encodeURIComponent(
       '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300" fill="%23ddd">' +
@@ -31,16 +30,147 @@
       'font-family="sans-serif">No Photo Available</text></svg>'
     );
 
+  var LEVELS = [
+    { name: 'Newbie Investor', emoji: '\uD83D\uDC23' },
+    { name: 'Property Peeker', emoji: '\uD83D\uDC40' },
+    { name: 'Deal Spotter', emoji: '\uD83D\uDD0D' },
+    { name: 'Comp Cruncher', emoji: '\uD83D\uDCCA' },
+    { name: 'Flip Apprentice', emoji: '\uD83D\uDD28' },
+    { name: 'Reno Rookie', emoji: '\uD83C\uDFD7\uFE0F' },
+    { name: 'ARV Analyst', emoji: '\uD83D\uDCC8' },
+    { name: 'Deal Maker', emoji: '\uD83E\uDD1D' },
+    { name: 'Market Master', emoji: '\uD83C\uDFC6' },
+    { name: 'Flip Expert', emoji: '\uD83D\uDC8E' },
+    { name: 'ARV Pro', emoji: '\uD83C\uDF93' },
+  ];
+
+  var GRADE_THRESHOLDS = [
+    { grade: 'A', max: 5 },
+    { grade: 'B', max: 10 },
+    { grade: 'C', max: 20 },
+    { grade: 'D', max: 35 },
+    { grade: 'F', max: Infinity },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Presentation Slides (from ARV Mastery PDF)
+  // ---------------------------------------------------------------------------
+
+  var SLIDES = [
+    {
+      title: 'ARV Mastery',
+      subtitle: 'How to Price Like a Pro',
+      body: 'Turning valuation guesswork into a defensible science.',
+      footer: 'Welcome to the squad \u2014 this training will transform how you think about property value.',
+      style: 'title',
+    },
+    {
+      title: 'Get This Number Wrong and You Lose Everything',
+      bullets: [
+        'The After Repair Value (ARV) is the single most critical number you will calculate.',
+        'A wrong ARV means your client overpays, the deal falls apart at appraisal, or the investor loses their margin.',
+        'Today\u2019s goal: strip away the guesswork and build a repeatable, defensible valuation process.',
+      ],
+      quote: 'One wrong number costs your client money and your credibility.',
+    },
+    {
+      title: 'ARV Defined: A Future Number, Not Today\u2019s Price',
+      body: 'The ARV is an estimate of a property\u2019s value after it has been fully renovated to meet the highest and best use for the neighborhood.',
+      columns: [
+        { heading: '\u201CAs-Is\u201D Value', items: ['Current condition', 'Old carpets & dated kitchen', 'Deferred maintenance', 'NOT the ARV'] },
+        { heading: 'ARV (Future)', items: ['Post-renovation price tag', 'New flooring & granite', 'Fresh finishes', 'Highest & Best Use'] },
+      ],
+      footer: 'Insight: What will a fully updated buyer pay?',
+    },
+    {
+      title: 'The Golden Formula',
+      body: 'ARV = Avg Price/Sq.Ft. of Comps \u00D7 Subject Property Sq.Ft.',
+      subtitle: 'Or more accurately: the median sale price of the most similar, recently renovated homes.',
+      columns: [
+        { heading: 'The Effort Ratio', items: ['The math takes 30 seconds.', 'The research takes 30 minutes.', 'That\u2019s where you earn your value.'] },
+        { heading: 'Garbage In, Garbage Out', items: ['\u201CComps\u201D are the foundation.', 'Weak comps produce an indefensible number.'] },
+      ],
+    },
+    {
+      title: 'The 4-3-2-1 Rule',
+      subtitle: 'Your Comp Selection Framework',
+      grid: [
+        { big: '4', label: 'Months', desc: 'Only sales from the last 4 months. Markets shift fast; older data is stale.' },
+        { big: '3', label: 'Blocks', desc: 'Same subdivision or \u00BD-mile radius. Do NOT cross major highways.' },
+        { big: '20%', label: 'Variance', desc: 'Comps within 20% of subject\u2019s sq. footage. Size drives value.' },
+        { big: '1', label: 'Style', desc: 'Match architectural style. Ranch to Ranch, Colonial to Colonial.' },
+      ],
+      footer: 'Don\u2019t look for the highest sale in the zip code. Conservative comps protect your client\u2019s margins.',
+    },
+    {
+      title: 'Adjustments: No Two Houses Are Identical',
+      body: 'When a comp differs from the subject, adjust the comp\u2019s sale price up or down.',
+      table: {
+        headers: ['Feature', 'Estimated Adjustment'],
+        rows: [
+          ['Full Bathroom', '$5,000 \u2013 $10,000'],
+          ['2-Car Garage', '$10,000 \u2013 $20,000'],
+          ['Finished Basement', '$15,000 \u2013 $30,000'],
+          ['Lot Size (per 0.25 acre)', '$10,000+'],
+        ],
+      },
+    },
+    {
+      title: 'Real Example: 123 Maple St.',
+      subtitle: '3 Bed / 2 Bath | 1,500 Sq. Ft. | No Garage',
+      table: {
+        headers: ['Comp', 'Details', 'Sale Price', 'Adj.', 'Adjusted'],
+        rows: [
+          ['456 Oak St', '3/2 \u00B7 1,550 sqft \u00B7 No Garage', '$300,000', 'None', '$300,000'],
+          ['789 Pine Ct', '3/2 \u00B7 1,450 sqft \u00B7 No Garage', '$295,000', 'None', '$295,000'],
+          ['101 Elm Ave', '3/2 \u00B7 1,600 sqft \u00B7 Has Garage', '$315,000', '-$15,000', '$300,000'],
+        ],
+      },
+      footer: 'Conservative ARV Range: $298,000 \u2013 $300,000',
+    },
+    {
+      title: 'Three Pitfalls That Will Destroy Your Credibility',
+      grid: [
+        { big: '01', label: 'The Neighborhood Ceiling', desc: 'Every neighborhood has a price cap. Don\u2019t project $400k if the highest sale ever was $350k.' },
+        { big: '02', label: 'External Obsolescence', desc: 'Backing up to a highway or loading dock kills value. It will never match the quiet cul-de-sac comp.' },
+        { big: '03', label: 'Active vs. Sold', desc: 'Never base ARV on \u201CActive\u201D listings. They represent what sellers WANT, not what buyers PAID.' },
+      ],
+    },
+    {
+      title: 'The Defensible Number',
+      subtitle: 'Your Professional Standard',
+      quote: 'If an appraiser won\u2019t agree with you in three months, your ARV is wrong.',
+      bullets: [
+        'Use the Golden Formula',
+        'Apply the 4-3-2-1 Rule',
+        'Adjust for Differences',
+        'Avoid Major Pitfalls',
+        'Be Conservative',
+      ],
+    },
+    {
+      title: 'You\u2019re Ready \u2014 Now Let\u2019s Practice',
+      style: 'title',
+      bullets: [
+        'Pull comps on your next listing using the 4-3-2-1 Rule.',
+        'Use the adjustment table as a field reference.',
+        'Request the Property Inspection Checklist for your walkthroughs.',
+      ],
+      footer: 'Welcome to the squad. Now go find some defensible numbers.',
+    },
+  ];
+
   // ---------------------------------------------------------------------------
   // Quiz state
   // ---------------------------------------------------------------------------
 
-  let properties = [];
-  let currentIndex = 0;
-  let totalQuestions = 10;
-  let results = [];
-  let runningArvPctSum = 0;
-  let runningRenoPctSum = 0;
+  var allProperties = null;
+  var moduleProperties = [];
+  var currentModuleIndex = 0;
+  var currentQuestionIndex = 0;
+  var moduleResults = [];
+  var runningArvPctSum = 0;
+  var runningRenoPctSum = 0;
 
   // ---------------------------------------------------------------------------
   // Utility helpers
@@ -52,8 +182,8 @@
   }
 
   function parseDollarInput(value) {
-    const cleaned = String(value).replace(/[^0-9.]/g, '');
-    const num = parseFloat(cleaned);
+    var cleaned = String(value).replace(/[^0-9.]/g, '');
+    var num = parseFloat(cleaned);
     return isNaN(num) ? NaN : num;
   }
 
@@ -63,45 +193,25 @@
   }
 
   function letterGrade(pctOff) {
-    for (const t of GRADE_THRESHOLDS) {
-      if (pctOff <= t.max) return t.grade;
+    for (var i = 0; i < GRADE_THRESHOLDS.length; i++) {
+      if (pctOff <= GRADE_THRESHOLDS[i].max) return GRADE_THRESHOLDS[i].grade;
     }
     return 'F';
-  }
-
-  function gradeToNumber(grade) {
-    return { A: 4, B: 3, C: 2, D: 1, F: 0 }[grade] || 0;
-  }
-
-  function numberToGrade(num) {
-    if (num >= 3.5) return 'A';
-    if (num >= 2.5) return 'B';
-    if (num >= 1.5) return 'C';
-    if (num >= 0.5) return 'D';
-    return 'F';
-  }
-
-  function weightedGrade(arvGrade, renoGrade) {
-    var score = gradeToNumber(arvGrade) * 0.6 + gradeToNumber(renoGrade) * 0.4;
-    return numberToGrade(score);
-  }
-
-  function shuffleArray(arr) {
-    var a = arr.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var tmp = a[i];
-      a[i] = a[j];
-      a[j] = tmp;
-    }
-    return a;
   }
 
   function gradeClass(grade) {
     return 'grade-' + grade.toLowerCase();
   }
 
-  /** Tiny DOM helper: el('div', { className: 'foo' }, child1, 'text', child2) */
+  function shuffleArray(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
+    }
+    return a;
+  }
+
   function el(tag, attrs) {
     var node = document.createElement(tag);
     if (attrs) {
@@ -109,25 +219,17 @@
       for (var k = 0; k < keys.length; k++) {
         var key = keys[k];
         var val = attrs[key];
-        if (key === 'className') {
-          node.className = val;
-        } else if (key === 'style' && typeof val === 'object') {
-          Object.assign(node.style, val);
-        } else if (key.indexOf('on') === 0) {
-          node.addEventListener(key.slice(2).toLowerCase(), val);
-        } else {
-          node.setAttribute(key, val);
-        }
+        if (key === 'className') node.className = val;
+        else if (key === 'style' && typeof val === 'object') Object.assign(node.style, val);
+        else if (key.indexOf('on') === 0) node.addEventListener(key.slice(2).toLowerCase(), val);
+        else node.setAttribute(key, val);
       }
     }
     for (var i = 2; i < arguments.length; i++) {
       var child = arguments[i];
       if (child == null) continue;
-      if (typeof child === 'string') {
-        node.appendChild(document.createTextNode(child));
-      } else {
-        node.appendChild(child);
-      }
+      if (typeof child === 'string') node.appendChild(document.createTextNode(child));
+      else node.appendChild(child);
     }
     return node;
   }
@@ -139,60 +241,88 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Data loading (static JSON file with pre-fetched off-market inventory)
+  // LocalStorage helpers
   // ---------------------------------------------------------------------------
 
-  let _allProperties = null; // cache so we only fetch once
-
-  async function fetchListings(state) {
-    if (!_allProperties) {
-      var resp = await fetch(DATA_URL);
-      if (!resp.ok) {
-        throw new Error('Failed to load property data (' + resp.status + ')');
-      }
-      _allProperties = await resp.json();
-
-      // Build dynamic state list
-      var stateSet = {};
-      _allProperties.forEach(function (p) {
-        if (p.usState) stateSet[p.usState] = (stateSet[p.usState] || 0) + 1;
-      });
-      var sorted = Object.keys(stateSet).sort(function (a, b) {
-        return stateSet[b] - stateSet[a]; // most properties first
-      });
-      STATES = ['All States'].concat(sorted);
-    }
-
-    // Filter by state if specified
-    if (state && state !== 'All States') {
-      return _allProperties.filter(function (p) {
-        return p.usState === state;
-      });
-    }
-    return _allProperties.slice();
+  function getEmail() {
+    try { return localStorage.getItem(STORAGE_EMAIL) || ''; } catch (_) { return ''; }
   }
 
-  // ---------------------------------------------------------------------------
-  // localStorage history helpers
-  // ---------------------------------------------------------------------------
+  function setEmail(email) {
+    try { localStorage.setItem(STORAGE_EMAIL, email); } catch (_) {}
+  }
 
-  function saveSession(session) {
+  function getProgress() {
     try {
-      var history = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-      history.unshift(session);
-      if (history.length > 50) history.length = 50;
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+      var p = JSON.parse(localStorage.getItem(STORAGE_PROGRESS) || '{}');
+      return {
+        completedModules: p.completedModules || [],
+      };
     } catch (_) {
-      /* storage full or unavailable */
+      return { completedModules: [] };
     }
   }
 
-  function getHistory() {
+  function saveProgress(progress) {
+    try { localStorage.setItem(STORAGE_PROGRESS, JSON.stringify(progress)); } catch (_) {}
+  }
+
+  function isPresentationDone() {
+    try { return localStorage.getItem(STORAGE_PRES) === 'true'; } catch (_) { return false; }
+  }
+
+  function setPresentationDone() {
+    try { localStorage.setItem(STORAGE_PRES, 'true'); } catch (_) {}
+  }
+
+  function getPropertyOrder() {
     try {
-      return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
-    } catch (_) {
-      return [];
+      var order = JSON.parse(localStorage.getItem(STORAGE_PROP_ORDER) || 'null');
+      return order;
+    } catch (_) { return null; }
+  }
+
+  function savePropertyOrder(order) {
+    try { localStorage.setItem(STORAGE_PROP_ORDER, JSON.stringify(order)); } catch (_) {}
+  }
+
+  // ---------------------------------------------------------------------------
+  // Header level badge
+  // ---------------------------------------------------------------------------
+
+  function updateHeaderLevel() {
+    var headerEl = document.getElementById('header-level');
+    if (!headerEl) return;
+    var progress = getProgress();
+    var level = progress.completedModules.length;
+    var info = LEVELS[Math.min(level, LEVELS.length - 1)];
+    headerEl.textContent = info.emoji + ' ' + info.name;
+    headerEl.className = 'header-level' + (level >= MODULES_COUNT ? ' header-level-complete' : '');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Data loading
+  // ---------------------------------------------------------------------------
+
+  async function loadProperties() {
+    if (allProperties) return allProperties;
+    var resp = await fetch(DATA_URL);
+    if (!resp.ok) throw new Error('Failed to load property data (' + resp.status + ')');
+    allProperties = await resp.json();
+    return allProperties;
+  }
+
+  function getModuleProperties(moduleIdx) {
+    if (!allProperties) return [];
+    var order = getPropertyOrder();
+    if (!order || order.length !== allProperties.length) {
+      order = shuffleArray(allProperties.map(function (_, i) { return i; }));
+      savePropertyOrder(order);
     }
+    var start = moduleIdx * QUESTIONS_PER_MODULE;
+    var end = start + QUESTIONS_PER_MODULE;
+    var indices = order.slice(start, end);
+    return indices.map(function (i) { return allProperties[i]; });
   }
 
   // ---------------------------------------------------------------------------
@@ -201,28 +331,14 @@
 
   function setupDollarInput(input) {
     input.addEventListener('keydown', function (e) {
-      var allowed = [
-        'Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight',
-        'Home', 'End', 'Enter', '.',
-      ];
-      if (
-        allowed.indexOf(e.key) !== -1 ||
-        (e.key >= '0' && e.key <= '9') ||
-        e.ctrlKey ||
-        e.metaKey
-      ) {
-        return;
-      }
+      var allowed = ['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End', 'Enter', '.'];
+      if (allowed.indexOf(e.key) !== -1 || (e.key >= '0' && e.key <= '9') || e.ctrlKey || e.metaKey) return;
       e.preventDefault();
     });
-
     input.addEventListener('blur', function () {
       var val = parseDollarInput(input.value);
-      if (!isNaN(val) && val > 0) {
-        input.value = Math.round(val).toLocaleString('en-US');
-      }
+      if (!isNaN(val) && val > 0) input.value = Math.round(val).toLocaleString('en-US');
     });
-
     input.addEventListener('focus', function () {
       var val = parseDollarInput(input.value);
       input.value = !isNaN(val) && val > 0 ? String(Math.round(val)) : '';
@@ -230,186 +346,367 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Start
+  // Screen: Sign In
   // ---------------------------------------------------------------------------
 
-  function renderStartScreen() {
+  function renderSignIn() {
     var app = clearApp();
-    var screen = el('div', { className: 'screen start-screen' });
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen signin-screen' });
 
-    screen.appendChild(el('h1', null, 'Rebuilt ARV Training'));
-    screen.appendChild(
-      el(
-        'p',
-        { className: 'instructions' },
-        'Test your ability to estimate ARV and renovation costs for off-market ' +
-          'properties. You will see real listings from the Rebuilt marketplace ' +
-          'and be graded on your accuracy.'
-      )
-    );
+    screen.appendChild(el('div', { className: 'signin-icon' }, '\uD83C\uDFE0'));
+    screen.appendChild(el('h1', null, 'ARV Mastery Training'));
+    screen.appendChild(el('p', { className: 'signin-subtitle' }, 'Master the art of pricing properties like a pro. Enter your email to get started.'));
 
-    // Question count selector
-    var qGroup = el('div', { className: 'input-group' });
-    qGroup.appendChild(el('label', { for: 'q-count' }, 'Number of Questions'));
-    var qSelect = el('select', { id: 'q-count' });
-    QUESTION_COUNTS.forEach(function (n) {
-      var opt = el('option', { value: String(n) }, String(n));
-      if (n === 10) opt.selected = true;
-      qSelect.appendChild(opt);
+    var form = el('div', { className: 'signin-form' });
+    var emailInput = el('input', {
+      type: 'email',
+      id: 'email-input',
+      placeholder: 'your.name@rebuilt.com',
+      autocomplete: 'email',
+      className: 'signin-input',
     });
-    qGroup.appendChild(qSelect);
-    screen.appendChild(qGroup);
 
-    // State filter selector
-    var sGroup = el('div', { className: 'input-group' });
-    sGroup.appendChild(el('label', { for: 's-filter' }, 'State Filter'));
-    var sSelect = el('select', { id: 's-filter' });
-    STATES.forEach(function (s) {
-      sSelect.appendChild(el('option', { value: s }, s));
-    });
-    sGroup.appendChild(sSelect);
-    screen.appendChild(sGroup);
+    var savedEmail = getEmail();
+    if (savedEmail) emailInput.value = savedEmail;
 
-    // History link (if sessions exist)
-    var history = getHistory();
-    if (history.length > 0) {
-      screen.appendChild(
-        el(
-          'button',
-          { className: 'btn-secondary', onClick: renderHistoryScreen },
-          'View History (' + history.length + ' sessions)'
-        )
-      );
+    var errorMsg = el('p', { className: 'signin-error', style: { display: 'none' } }, 'Please enter a valid email address.');
+
+    var submitBtn = el('button', {
+      className: 'btn-primary btn-large',
+      onClick: function () {
+        var email = emailInput.value.trim();
+        if (!email || email.indexOf('@') === -1 || email.indexOf('.') === -1) {
+          errorMsg.style.display = 'block';
+          emailInput.classList.add('input-error');
+          emailInput.focus();
+          return;
+        }
+        setEmail(email);
+        if (isPresentationDone()) {
+          renderDashboard();
+        } else {
+          renderPresentation();
+        }
+      }
+    }, 'Start Training');
+
+    form.appendChild(el('label', { for: 'email-input', className: 'signin-label' }, 'Email Address'));
+    form.appendChild(emailInput);
+    form.appendChild(errorMsg);
+    form.appendChild(submitBtn);
+    screen.appendChild(form);
+
+    app.appendChild(screen);
+    if (!savedEmail) emailInput.focus();
+
+    function onKey(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        submitBtn.click();
+      }
+    }
+    emailInput.addEventListener('keydown', onKey);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Presentation (10 slides from PDF)
+  // ---------------------------------------------------------------------------
+
+  function renderPresentation() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var slideIdx = 0;
+
+    function renderSlide() {
+      app.innerHTML = '';
+      var slide = SLIDES[slideIdx];
+      var screen = el('div', { className: 'screen pres-screen' + (slide.style === 'title' ? ' pres-title-slide' : '') });
+
+      // Progress
+      var progress = el('div', { className: 'pres-progress' });
+      progress.appendChild(el('span', { className: 'pres-counter' }, 'Slide ' + (slideIdx + 1) + ' of ' + SLIDES.length));
+      var bar = el('div', { className: 'pres-bar' });
+      bar.appendChild(el('div', { className: 'pres-bar-fill', style: { width: ((slideIdx + 1) / SLIDES.length * 100) + '%' } }));
+      progress.appendChild(bar);
+      screen.appendChild(progress);
+
+      // Content card
+      var card = el('div', { className: 'pres-card' });
+
+      if (slide.title) card.appendChild(el('h1', { className: 'pres-title' }, slide.title));
+      if (slide.subtitle) card.appendChild(el('p', { className: 'pres-subtitle' }, slide.subtitle));
+      if (slide.body) card.appendChild(el('p', { className: 'pres-body' }, slide.body));
+      if (slide.quote) {
+        card.appendChild(el('blockquote', { className: 'pres-quote' }, '\u201C' + slide.quote + '\u201D'));
+      }
+
+      if (slide.bullets) {
+        var ul = el('ul', { className: 'pres-bullets' });
+        slide.bullets.forEach(function (b) { ul.appendChild(el('li', null, b)); });
+        card.appendChild(ul);
+      }
+
+      if (slide.columns) {
+        var cols = el('div', { className: 'pres-columns' });
+        slide.columns.forEach(function (col) {
+          var c = el('div', { className: 'pres-col' });
+          c.appendChild(el('h3', null, col.heading));
+          var ul = el('ul', null);
+          col.items.forEach(function (item) { ul.appendChild(el('li', null, item)); });
+          c.appendChild(ul);
+          cols.appendChild(c);
+        });
+        card.appendChild(cols);
+      }
+
+      if (slide.grid) {
+        var grid = el('div', { className: 'pres-grid' });
+        slide.grid.forEach(function (item) {
+          var cell = el('div', { className: 'pres-grid-cell' });
+          cell.appendChild(el('div', { className: 'pres-grid-big' }, item.big));
+          cell.appendChild(el('div', { className: 'pres-grid-label' }, item.label));
+          cell.appendChild(el('p', { className: 'pres-grid-desc' }, item.desc));
+          grid.appendChild(cell);
+        });
+        card.appendChild(grid);
+      }
+
+      if (slide.table) {
+        var tbl = el('div', { className: 'pres-table' });
+        var thead = el('div', { className: 'pres-table-row pres-table-header' });
+        slide.table.headers.forEach(function (h) {
+          thead.appendChild(el('div', { className: 'pres-table-cell' }, h));
+        });
+        tbl.appendChild(thead);
+        slide.table.rows.forEach(function (row) {
+          var tr = el('div', { className: 'pres-table-row' });
+          row.forEach(function (cell) {
+            tr.appendChild(el('div', { className: 'pres-table-cell' }, cell));
+          });
+          tbl.appendChild(tr);
+        });
+        card.appendChild(tbl);
+      }
+
+      if (slide.footer) {
+        card.appendChild(el('p', { className: 'pres-footer' }, slide.footer));
+      }
+
+      screen.appendChild(card);
+
+      // Navigation
+      var nav = el('div', { className: 'pres-nav' });
+      if (slideIdx > 0) {
+        nav.appendChild(el('button', {
+          className: 'btn-secondary',
+          onClick: function () { slideIdx--; renderSlide(); }
+        }, '\u2190 Back'));
+      } else {
+        nav.appendChild(el('span', null));
+      }
+
+      var isLast = slideIdx >= SLIDES.length - 1;
+      nav.appendChild(el('button', {
+        className: 'btn-primary',
+        onClick: function () {
+          if (isLast) {
+            setPresentationDone();
+            renderDashboard();
+          } else {
+            slideIdx++;
+            renderSlide();
+          }
+        }
+      }, isLast ? 'Start the Quiz \u2192' : 'Next \u2192'));
+
+      screen.appendChild(nav);
+      app.appendChild(screen);
     }
 
-    // Start button
-    screen.appendChild(
-      el(
-        'button',
-        {
-          className: 'btn-primary',
-          onClick: function () {
-            startQuiz(qSelect.value, sSelect.value);
-          },
-        },
-        'Start Quiz'
-      )
-    );
-
-    app.appendChild(screen);
+    // Keyboard navigation
+    function onKey(e) {
+      if (e.key === 'ArrowRight' || e.key === 'Enter') {
+        if (slideIdx < SLIDES.length - 1) { slideIdx++; renderSlide(); }
+        else { setPresentationDone(); renderDashboard(); document.removeEventListener('keydown', onKey); }
+      } else if (e.key === 'ArrowLeft' && slideIdx > 0) {
+        slideIdx--; renderSlide();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    renderSlide();
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Loading
+  // Screen: Dashboard (Module Select + Progress)
   // ---------------------------------------------------------------------------
 
-  function renderLoadingScreen() {
+  function renderDashboard() {
     var app = clearApp();
-    var screen = el('div', { className: 'screen loading-screen' });
-    screen.appendChild(el('div', { className: 'loading-spinner' }));
-    screen.appendChild(
-      el('p', null, 'Loading property data...')
-    );
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen dashboard-screen' });
+
+    var progress = getProgress();
+    var completed = progress.completedModules;
+    var level = completed.length;
+    var info = LEVELS[Math.min(level, LEVELS.length - 1)];
+
+    // Check if all complete
+    if (level >= MODULES_COUNT) {
+      renderDiploma();
+      return;
+    }
+
+    // Level banner
+    var banner = el('div', { className: 'dash-banner' });
+    banner.appendChild(el('div', { className: 'dash-level-emoji' }, info.emoji));
+    banner.appendChild(el('h1', { className: 'dash-level-name' }, info.name));
+    banner.appendChild(el('p', { className: 'dash-level-sub' }, level + ' of ' + MODULES_COUNT + ' modules completed'));
+    screen.appendChild(banner);
+
+    // Global progress bar
+    var pbar = el('div', { className: 'dash-progress' });
+    for (var p = 0; p < MODULES_COUNT; p++) {
+      var seg = el('div', {
+        className: 'dash-progress-seg' +
+          (completed.indexOf(p) !== -1 ? ' seg-complete' : '') +
+          (p === level ? ' seg-current' : ''),
+      });
+      seg.appendChild(el('span', null, String(p + 1)));
+      pbar.appendChild(seg);
+    }
+    screen.appendChild(pbar);
+
+    // Module grid
+    var grid = el('div', { className: 'dash-modules' });
+    for (var m = 0; m < MODULES_COUNT; m++) {
+      (function (moduleIdx) {
+        var isCompleted = completed.indexOf(moduleIdx) !== -1;
+        var isUnlocked = moduleIdx === 0 || completed.indexOf(moduleIdx - 1) !== -1;
+        var isCurrent = moduleIdx === level;
+
+        var card = el('div', {
+          className: 'dash-module-card' +
+            (isCompleted ? ' mod-complete' : '') +
+            (isCurrent ? ' mod-current' : '') +
+            (!isUnlocked && !isCompleted ? ' mod-locked' : ''),
+        });
+
+        var icon = isCompleted ? '\u2705' : (isUnlocked ? '\uD83D\uDCCB' : '\uD83D\uDD12');
+        card.appendChild(el('div', { className: 'mod-icon' }, icon));
+        card.appendChild(el('div', { className: 'mod-number' }, 'Module ' + (moduleIdx + 1)));
+        card.appendChild(el('div', { className: 'mod-questions' }, QUESTIONS_PER_MODULE + ' properties'));
+
+        if (isCompleted) {
+          card.appendChild(el('div', { className: 'mod-status mod-status-pass' }, '\u2713 Passed'));
+        } else if (isCurrent) {
+          card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Ready'));
+        } else if (!isUnlocked) {
+          card.appendChild(el('div', { className: 'mod-status mod-status-locked' }, 'Locked'));
+        } else {
+          card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Available'));
+        }
+
+        if (isUnlocked || isCompleted) {
+          card.style.cursor = 'pointer';
+          card.addEventListener('click', function () {
+            startModule(moduleIdx);
+          });
+        }
+
+        grid.appendChild(card);
+      })(m);
+    }
+    screen.appendChild(grid);
+
+    // Pass criteria note
+    screen.appendChild(el('div', { className: 'dash-criteria' },
+      el('p', null, '\uD83C\uDFAF Pass criteria: Average ARV within ' + ARV_PASS_THRESHOLD + '% and Rehab within ' + RENO_PASS_THRESHOLD + '% across all 5 properties in the module.')
+    ));
+
     app.appendChild(screen);
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Error
+  // Start a module
   // ---------------------------------------------------------------------------
 
-  function renderErrorScreen(message) {
+  async function startModule(moduleIdx) {
+    currentModuleIndex = moduleIdx;
+    currentQuestionIndex = 0;
+    moduleResults = [];
+    runningArvPctSum = 0;
+    runningRenoPctSum = 0;
+
+    var app = clearApp();
+    var loadScreen = el('div', { className: 'screen loading-screen' });
+    loadScreen.appendChild(el('div', { className: 'loading-spinner' }));
+    loadScreen.appendChild(el('p', null, 'Loading Module ' + (moduleIdx + 1) + '...'));
+    app.appendChild(loadScreen);
+
+    try {
+      await loadProperties();
+      moduleProperties = getModuleProperties(moduleIdx);
+
+      if (moduleProperties.length < QUESTIONS_PER_MODULE) {
+        renderError('Not enough properties for this module. Need ' + QUESTIONS_PER_MODULE + ' but only found ' + moduleProperties.length + '.');
+        return;
+      }
+
+      renderQuizQuestion();
+    } catch (err) {
+      renderError('Failed to load properties: ' + err.message);
+    }
+  }
+
+  function renderError(message) {
     var app = clearApp();
     var screen = el('div', { className: 'screen error-screen' });
     screen.appendChild(el('h2', null, 'Something went wrong'));
     screen.appendChild(el('p', { className: 'error-message' }, message));
-    screen.appendChild(
-      el(
-        'button',
-        { className: 'btn-primary', onClick: renderStartScreen },
-        'Back to Start'
-      )
-    );
+    screen.appendChild(el('button', { className: 'btn-primary', onClick: renderDashboard }, 'Back to Dashboard'));
     app.appendChild(screen);
   }
 
   // ---------------------------------------------------------------------------
-  // Quiz initialisation
+  // Shared UI: Module score tracker
   // ---------------------------------------------------------------------------
 
-  async function startQuiz(count, state) {
-    totalQuestions = parseInt(count, 10);
-    currentIndex = 0;
-    results = [];
-    runningArvPctSum = 0;
-    runningRenoPctSum = 0;
-
-    renderLoadingScreen();
-
-    try {
-      var listings = await fetchListings(state);
-
-      if (listings.length < totalQuestions) {
-        renderErrorScreen(
-          'Only ' +
-            listings.length +
-            ' properties with valid ARV and renovation data found' +
-            (state !== 'All States' ? ' in ' + state : '') +
-            '. Try fewer questions or a different state.'
-        );
-        return;
-      }
-
-      properties = shuffleArray(listings).slice(0, totalQuestions);
-      renderQuizQuestion();
-    } catch (err) {
-      renderErrorScreen('Failed to load properties: ' + err.message);
-    }
-  }
-
-  // ---------------------------------------------------------------------------
-  // Shared UI fragments
-  // ---------------------------------------------------------------------------
-
-  function buildScoreTracker() {
-    var answered = results.length;
+  function buildModuleTracker() {
+    var answered = moduleResults.length;
     var avgArv = answered > 0 ? (runningArvPctSum / answered).toFixed(1) : '\u2014';
-    var avgReno =
-      answered > 0 ? (runningRenoPctSum / answered).toFixed(1) : '\u2014';
+    var avgReno = answered > 0 ? (runningRenoPctSum / answered).toFixed(1) : '\u2014';
 
-    return el(
-      'div',
-      { className: 'score-tracker' },
-      el('span', null, 'Question ' + (currentIndex + 1) + '/' + totalQuestions),
+    return el('div', { className: 'score-tracker' },
+      el('span', null, 'Module ' + (currentModuleIndex + 1) + ' \u2022 Question ' + (currentQuestionIndex + 1) + '/' + QUESTIONS_PER_MODULE),
       el('span', null, 'Avg ARV: ' + avgArv + '% off'),
       el('span', null, 'Avg Reno: ' + avgReno + '% off')
     );
   }
 
-  function buildProgressBar() {
-    var pct = (currentIndex / totalQuestions) * 100;
+  function buildModuleProgress() {
+    var pct = (currentQuestionIndex / QUESTIONS_PER_MODULE) * 100;
     var bar = el('div', { className: 'progress-bar' });
-    bar.appendChild(
-      el('div', { className: 'progress-fill', style: { width: pct + '%' } })
-    );
+    bar.appendChild(el('div', { className: 'progress-fill', style: { width: pct + '%' } }));
     return bar;
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Quiz Question
+  // Screen: Quiz Question (with carousel + thumbnails)
   // ---------------------------------------------------------------------------
 
   function renderQuizQuestion() {
     var app = clearApp();
-    var prop = properties[currentIndex];
+    updateHeaderLevel();
+    var prop = moduleProperties[currentQuestionIndex];
     var screen = el('div', { className: 'screen quiz-screen' });
 
-    screen.appendChild(buildScoreTracker());
-    screen.appendChild(buildProgressBar());
+    screen.appendChild(buildModuleTracker());
+    screen.appendChild(buildModuleProgress());
 
-    // Property card
     var card = el('div', { className: 'property-card' });
 
-    // --- Photo carousel ---
+    // --- Photo carousel with thumbnails ---
     var images = (prop.imageUrls && prop.imageUrls.length > 0)
       ? prop.imageUrls
       : [prop.thumbnailUrl || PLACEHOLDER_IMG];
@@ -421,38 +718,35 @@
       src: images[0] || PLACEHOLDER_IMG,
       alt: prop.displayAddress || 'Property photo',
     });
-    carouselImg.addEventListener('error', function () {
-      carouselImg.src = PLACEHOLDER_IMG;
-    });
+    carouselImg.addEventListener('error', function () { carouselImg.src = PLACEHOLDER_IMG; });
 
-    var counter = el('span', { className: 'carousel-counter' },
-      '1 / ' + images.length);
+    var counter = el('span', { className: 'carousel-counter' }, '1 / ' + images.length);
+    var thumbsContainer = null;
 
     function updateCarousel() {
       carouselImg.src = images[carouselIdx] || PLACEHOLDER_IMG;
       counter.textContent = (carouselIdx + 1) + ' / ' + images.length;
-      var dots = carousel.querySelectorAll('.carousel-dot');
-      for (var d = 0; d < dots.length; d++) {
-        dots[d].className = 'carousel-dot' + (d === carouselIdx ? ' active' : '');
+      // Update thumbnails
+      if (thumbsContainer) {
+        var thumbs = thumbsContainer.querySelectorAll('.thumb-img');
+        for (var t = 0; t < thumbs.length; t++) {
+          thumbs[t].className = 'thumb-img' + (t === carouselIdx ? ' thumb-active' : '');
+        }
+        // Scroll active thumb into view
+        if (thumbs[carouselIdx]) {
+          thumbs[carouselIdx].scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
       }
     }
 
     var prevBtn = el('button', {
       className: 'carousel-btn carousel-prev',
-      onClick: function (e) {
-        e.stopPropagation();
-        carouselIdx = (carouselIdx - 1 + images.length) % images.length;
-        updateCarousel();
-      }
+      onClick: function (e) { e.stopPropagation(); carouselIdx = (carouselIdx - 1 + images.length) % images.length; updateCarousel(); }
     }, '\u2039');
 
     var nextBtn = el('button', {
       className: 'carousel-btn carousel-next',
-      onClick: function (e) {
-        e.stopPropagation();
-        carouselIdx = (carouselIdx + 1) % images.length;
-        updateCarousel();
-      }
+      onClick: function (e) { e.stopPropagation(); carouselIdx = (carouselIdx + 1) % images.length; updateCarousel(); }
     }, '\u203A');
 
     var viewport = el('div', { className: 'carousel-viewport' });
@@ -464,51 +758,44 @@
     }
     carousel.appendChild(viewport);
 
-    // Dot indicators
+    // Thumbnail strip
     if (images.length > 1) {
-      var dotsContainer = el('div', { className: 'carousel-dots' });
-      for (var di = 0; di < Math.min(images.length, 12); di++) {
+      thumbsContainer = el('div', { className: 'carousel-thumbs' });
+      for (var ti = 0; ti < images.length; ti++) {
         (function (idx) {
-          dotsContainer.appendChild(el('div', {
-            className: 'carousel-dot' + (idx === 0 ? ' active' : ''),
-            onClick: function () {
-              carouselIdx = idx;
-              updateCarousel();
-            }
-          }));
-        })(di);
+          var thumb = el('img', {
+            className: 'thumb-img' + (idx === 0 ? ' thumb-active' : ''),
+            src: images[idx] || PLACEHOLDER_IMG,
+            alt: 'Photo ' + (idx + 1),
+          });
+          thumb.addEventListener('error', function () { thumb.src = PLACEHOLDER_IMG; });
+          thumb.addEventListener('click', function () {
+            carouselIdx = idx;
+            updateCarousel();
+          });
+          thumbsContainer.appendChild(thumb);
+        })(ti);
       }
-      carousel.appendChild(dotsContainer);
+      carousel.appendChild(thumbsContainer);
     }
 
-    // Touch/swipe support
+    // Touch/swipe
     var touchStartX = 0;
-    viewport.addEventListener('touchstart', function (e) {
-      touchStartX = e.touches[0].clientX;
-    }, { passive: true });
+    viewport.addEventListener('touchstart', function (e) { touchStartX = e.touches[0].clientX; }, { passive: true });
     viewport.addEventListener('touchend', function (e) {
       var dx = e.changedTouches[0].clientX - touchStartX;
       if (Math.abs(dx) > 40) {
-        if (dx < 0) {
-          carouselIdx = (carouselIdx + 1) % images.length;
-        } else {
-          carouselIdx = (carouselIdx - 1 + images.length) % images.length;
-        }
+        carouselIdx = dx < 0 ? (carouselIdx + 1) % images.length : (carouselIdx - 1 + images.length) % images.length;
         updateCarousel();
       }
     }, { passive: true });
 
     card.appendChild(carousel);
 
-    card.appendChild(
-      el(
-        'h2',
-        { className: 'property-address' },
-        prop.displayAddress || 'Address unavailable'
-      )
-    );
+    // Address
+    card.appendChild(el('h2', { className: 'property-address' }, prop.displayAddress || 'Address unavailable'));
 
-    // Stats grid
+    // Stats grid (NO list price)
     var stats = el('div', { className: 'property-stats' });
     var lotDisplay = '\u2014';
     if (prop.lotSize) {
@@ -525,17 +812,12 @@
       ['Year Built', prop.yearBuilt || '\u2014'],
       ['Type', prop.houseType || '\u2014'],
       ['Lot', lotDisplay],
-      ['List Price', formatDollars(prop.salePrice)],
     ];
     statItems.forEach(function (pair) {
-      stats.appendChild(
-        el(
-          'div',
-          { className: 'stat-item' },
-          el('span', { className: 'stat-label' }, pair[0]),
-          el('span', { className: 'stat-value' }, String(pair[1]))
-        )
-      );
+      stats.appendChild(el('div', { className: 'stat-item' },
+        el('span', { className: 'stat-label' }, pair[0]),
+        el('span', { className: 'stat-value' }, String(pair[1]))
+      ));
     });
     card.appendChild(stats);
     screen.appendChild(card);
@@ -544,74 +826,36 @@
     var form = el('div', { className: 'estimate-form' });
 
     var arvGroup = el('div', { className: 'input-group' });
-    arvGroup.appendChild(
-      el('label', { for: 'arv-input' }, 'Your ARV Estimate ($)')
-    );
-    var arvInput = el('input', {
-      type: 'text',
-      id: 'arv-input',
-      placeholder: 'e.g. 350000',
-      inputmode: 'numeric',
-      autocomplete: 'off',
-    });
+    arvGroup.appendChild(el('label', { for: 'arv-input' }, 'Your ARV Estimate ($)'));
+    var arvInput = el('input', { type: 'text', id: 'arv-input', placeholder: 'e.g. 350000', inputmode: 'numeric', autocomplete: 'off' });
     setupDollarInput(arvInput);
     arvGroup.appendChild(arvInput);
     form.appendChild(arvGroup);
 
     var renoGroup = el('div', { className: 'input-group' });
-    renoGroup.appendChild(
-      el('label', { for: 'reno-input' }, 'Your Reno Estimate ($)')
-    );
-    var renoInput = el('input', {
-      type: 'text',
-      id: 'reno-input',
-      placeholder: 'e.g. 45000',
-      inputmode: 'numeric',
-      autocomplete: 'off',
-    });
+    renoGroup.appendChild(el('label', { for: 'reno-input' }, 'Your Reno Estimate ($)'));
+    var renoInput = el('input', { type: 'text', id: 'reno-input', placeholder: 'e.g. 45000', inputmode: 'numeric', autocomplete: 'off' });
     setupDollarInput(renoInput);
     renoGroup.appendChild(renoInput);
     form.appendChild(renoGroup);
 
-    var submitBtn = el(
-      'button',
-      { className: 'btn-primary', onClick: handleSubmit },
-      'Submit Estimate'
-    );
+    var submitBtn = el('button', { className: 'btn-primary', onClick: handleSubmit }, 'Submit Estimate');
     form.appendChild(submitBtn);
     screen.appendChild(form);
 
     app.appendChild(screen);
     arvInput.focus();
 
-    // Enter shortcut
-    function onKeyDown(e) {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        handleSubmit();
-      }
-    }
+    function onKeyDown(e) { if (e.key === 'Enter') { e.preventDefault(); handleSubmit(); } }
     document.addEventListener('keydown', onKeyDown);
-
     var submitted = false;
 
     function handleSubmit() {
       if (submitted) return;
-
       var userArv = parseDollarInput(arvInput.value);
       var userReno = parseDollarInput(renoInput.value);
-
-      // Validation
-      if (isNaN(userArv) || userArv <= 0) {
-        arvInput.classList.add('input-error');
-        arvInput.focus();
-        return;
-      }
-      if (isNaN(userReno) || userReno <= 0) {
-        renoInput.classList.add('input-error');
-        renoInput.focus();
-        return;
-      }
+      if (isNaN(userArv) || userArv <= 0) { arvInput.classList.add('input-error'); arvInput.focus(); return; }
+      if (isNaN(userReno) || userReno <= 0) { renoInput.classList.add('input-error'); renoInput.focus(); return; }
 
       submitted = true;
       document.removeEventListener('keydown', onKeyDown);
@@ -620,7 +864,6 @@
       var renoPct = pctDiff(userReno, prop.estimatedRenovation);
       var arvGrade = letterGrade(arvPct);
       var renoGrade = letterGrade(renoPct);
-      var overall = weightedGrade(arvGrade, renoGrade);
 
       runningArvPctSum += arvPct;
       runningRenoPctSum += renoPct;
@@ -633,115 +876,74 @@
         renoPct: renoPct,
         arvGrade: arvGrade,
         renoGrade: renoGrade,
-        overallGrade: overall,
       };
-      results.push(result);
+      moduleResults.push(result);
       renderResultScreen(result);
     }
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Result (after each question)
+  // Screen: Result (per question)
   // ---------------------------------------------------------------------------
 
   function renderResultScreen(result) {
     var app = clearApp();
+    updateHeaderLevel();
     var screen = el('div', { className: 'screen results-screen' });
     var prop = result.property;
 
-    screen.appendChild(buildScoreTracker());
-    screen.appendChild(buildProgressBar());
+    screen.appendChild(buildModuleTracker());
+    screen.appendChild(buildModuleProgress());
 
     screen.appendChild(el('h2', null, prop.displayAddress));
 
-    // Overall grade badge
-    screen.appendChild(
-      el(
-        'div',
-        { className: 'grade-badge ' + gradeClass(result.overallGrade) + ' overall-grade' },
-        result.overallGrade
-      )
-    );
-
     // ARV comparison
-    screen.appendChild(
-      buildComparison(
-        'ARV Estimate',
-        result.userArv,
-        prop.estimatedArv,
-        result.arvPct,
-        result.arvGrade
-      )
-    );
-
+    screen.appendChild(buildComparison('ARV Estimate', result.userArv, prop.estimatedArv, result.arvPct, result.arvGrade));
     // Reno comparison
-    screen.appendChild(
-      buildComparison(
-        'Renovation Estimate',
-        result.userReno,
-        prop.estimatedRenovation,
-        result.renoPct,
-        result.renoGrade
-      )
-    );
+    screen.appendChild(buildComparison('Renovation Estimate', result.userReno, prop.estimatedRenovation, result.renoPct, result.renoGrade));
 
-    // Reveal additional info
+    // Reveal info (no list price on quiz screen, but show it in results)
     var reveal = el('div', { className: 'answer-reveal' });
-    reveal.appendChild(
-      el('p', null, 'List Price: ' + formatDollars(prop.salePrice))
-    );
+    reveal.appendChild(el('p', null, 'List Price: ' + formatDollars(prop.salePrice)));
     if (prop.estimatedMonthlyRent) {
-      var monthlyRent = prop.estimatedMonthlyRent > 5000
-        ? Math.round(prop.estimatedMonthlyRent / 12)
-        : prop.estimatedMonthlyRent;
-      reveal.appendChild(
-        el(
-          'p',
-          null,
-          'Est. Monthly Rent: ' + formatDollars(monthlyRent)
-        )
-      );
+      var monthlyRent = prop.estimatedMonthlyRent > 5000 ? Math.round(prop.estimatedMonthlyRent / 12) : prop.estimatedMonthlyRent;
+      reveal.appendChild(el('p', null, 'Est. Monthly Rent: ' + formatDollars(monthlyRent)));
     }
+
+    // Pass/fail indicators for this question
+    var arvPass = result.arvPct <= ARV_PASS_THRESHOLD;
+    var renoPass = result.renoPct <= RENO_PASS_THRESHOLD;
+    reveal.appendChild(el('p', { className: arvPass ? 'text-good' : 'text-bad' },
+      'ARV: ' + result.arvPct.toFixed(1) + '% off ' + (arvPass ? '\u2713 Within ' + ARV_PASS_THRESHOLD + '%' : '\u2717 Over ' + ARV_PASS_THRESHOLD + '% threshold')));
+    reveal.appendChild(el('p', { className: renoPass ? 'text-good' : 'text-bad' },
+      'Reno: ' + result.renoPct.toFixed(1) + '% off ' + (renoPass ? '\u2713 Within ' + RENO_PASS_THRESHOLD + '%' : '\u2717 Over ' + RENO_PASS_THRESHOLD + '% threshold')));
     screen.appendChild(reveal);
 
-    // Next / Summary button
-    var isLast = currentIndex + 1 >= totalQuestions;
-    screen.appendChild(
-      el(
-        'button',
-        {
-          className: 'btn-primary',
-          onClick: function () {
-            if (isLast) {
-              renderSummaryScreen();
-            } else {
-              currentIndex++;
-              renderQuizQuestion();
-            }
-          },
-        },
-        isLast ? 'View Summary' : 'Next Property'
-      )
-    );
+    var isLast = currentQuestionIndex + 1 >= QUESTIONS_PER_MODULE;
+    screen.appendChild(el('button', {
+      className: 'btn-primary',
+      onClick: function () {
+        if (isLast) {
+          renderModuleSummary();
+        } else {
+          currentQuestionIndex++;
+          renderQuizQuestion();
+        }
+      }
+    }, isLast ? 'View Module Results' : 'Next Property \u2192'));
 
     app.appendChild(screen);
 
-    // Enter shortcut to advance
     function onKey(e) {
       if (e.key === 'Enter') {
         document.removeEventListener('keydown', onKey);
-        if (isLast) {
-          renderSummaryScreen();
-        } else {
-          currentIndex++;
-          renderQuizQuestion();
-        }
+        if (isLast) renderModuleSummary();
+        else { currentQuestionIndex++; renderQuizQuestion(); }
       }
     }
     document.addEventListener('keydown', onKey);
   }
 
-  /** Build a side-by-side comparison block for one metric (ARV or Reno). */
   function buildComparison(label, userVal, actualVal, pctOff, grade) {
     var diff = userVal - actualVal;
     var sign = diff >= 0 ? '+' : '';
@@ -749,327 +951,169 @@
 
     var comp = el('div', { className: 'result-comparison' });
     comp.appendChild(el('h3', null, label));
-
     var row = el('div', { className: 'comparison-row' });
-
-    row.appendChild(
-      el(
-        'div',
-        { className: 'comparison-cell' },
-        el('span', { className: 'comp-label' }, 'Your Estimate'),
-        el('span', { className: 'comp-value' }, formatDollars(userVal))
-      )
-    );
-    row.appendChild(
-      el(
-        'div',
-        { className: 'comparison-cell' },
-        el('span', { className: 'comp-label' }, 'Actual'),
-        el('span', { className: 'comp-value' }, formatDollars(actualVal))
-      )
-    );
-    row.appendChild(
-      el(
-        'div',
-        { className: 'comparison-cell' },
-        el('span', { className: 'comp-label' }, 'Difference'),
-        el(
-          'span',
-          { className: 'comp-value ' + (isGood ? 'text-good' : 'text-bad') },
-          sign + formatDollars(Math.abs(diff)) + ' (' + pctOff.toFixed(1) + '%)'
-        )
-      )
-    );
-    row.appendChild(
-      el(
-        'div',
-        { className: 'comparison-cell' },
-        el('span', { className: 'grade-badge ' + gradeClass(grade) }, grade)
-      )
-    );
-
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Your Estimate'),
+      el('span', { className: 'comp-value' }, formatDollars(userVal))
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Actual'),
+      el('span', { className: 'comp-value' }, formatDollars(actualVal))
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'comp-label' }, 'Difference'),
+      el('span', { className: 'comp-value ' + (isGood ? 'text-good' : 'text-bad') },
+        sign + formatDollars(Math.abs(diff)) + ' (' + pctOff.toFixed(1) + '%)')
+    ));
+    row.appendChild(el('div', { className: 'comparison-cell' },
+      el('span', { className: 'grade-badge ' + gradeClass(grade) }, grade)
+    ));
     comp.appendChild(row);
     return comp;
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: Summary (end of quiz)
+  // Screen: Module Summary (pass/fail)
   // ---------------------------------------------------------------------------
 
-  function renderSummaryScreen() {
+  function renderModuleSummary() {
     var app = clearApp();
-    var screen = el('div', { className: 'screen summary-screen' });
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen module-summary-screen' });
 
-    screen.appendChild(el('h1', null, 'Quiz Complete'));
+    var avgArvPct = runningArvPctSum / moduleResults.length;
+    var avgRenoPct = runningRenoPctSum / moduleResults.length;
+    var arvPassed = avgArvPct <= ARV_PASS_THRESHOLD;
+    var renoPassed = avgRenoPct <= RENO_PASS_THRESHOLD;
+    var modulePassed = arvPassed && renoPassed;
 
-    var avgArvPct = runningArvPctSum / results.length;
-    var avgRenoPct = runningRenoPctSum / results.length;
-    var avgArvGrade = letterGrade(avgArvPct);
-    var avgRenoGrade = letterGrade(avgRenoPct);
-    var overallGrade = weightedGrade(avgArvGrade, avgRenoGrade);
+    screen.appendChild(el('h1', null, 'Module ' + (currentModuleIndex + 1) + ' Results'));
 
-    // Persist session to localStorage
-    var dist = gradeDistribution();
-    saveSession({
-      date: new Date().toISOString(),
-      totalQuestions: totalQuestions,
-      overallGrade: overallGrade,
-      avgArvPct: avgArvPct.toFixed(1),
-      avgRenoPct: avgRenoPct.toFixed(1),
-      gradeDist: dist,
-    });
-
-    // Big overall grade badge
-    screen.appendChild(
-      el(
-        'div',
-        { className: 'grade-badge ' + gradeClass(overallGrade) + ' summary-overall' },
-        overallGrade
-      )
+    // Big pass/fail badge
+    var badge = el('div', { className: 'module-badge ' + (modulePassed ? 'badge-pass' : 'badge-fail') },
+      modulePassed ? '\u2705' : '\u274C'
     );
-    screen.appendChild(el('p', { className: 'summary-label' }, 'Overall Performance'));
+    screen.appendChild(badge);
+    screen.appendChild(el('h2', { className: 'module-verdict ' + (modulePassed ? 'text-good' : 'text-bad') },
+      modulePassed ? 'Module Passed!' : 'Module Failed'
+    ));
 
-    // Avg accuracy stats
-    var statsDiv = el('div', { className: 'summary-stats' });
-    statsDiv.appendChild(
-      el(
-        'div',
-        { className: 'stat-item' },
-        el('span', { className: 'stat-label' }, 'Avg ARV Accuracy'),
-        el(
-          'span',
-          { className: 'stat-value' },
-          avgArvPct.toFixed(1) + '% off (' + avgArvGrade + ')'
-        )
-      )
-    );
-    statsDiv.appendChild(
-      el(
-        'div',
-        { className: 'stat-item' },
-        el('span', { className: 'stat-label' }, 'Avg Reno Accuracy'),
-        el(
-          'span',
-          { className: 'stat-value' },
-          avgRenoPct.toFixed(1) + '% off (' + avgRenoGrade + ')'
-        )
-      )
-    );
+    // Stats
+    var statsDiv = el('div', { className: 'module-stats' });
+    statsDiv.appendChild(el('div', { className: 'stat-item' + (arvPassed ? ' stat-pass' : ' stat-fail') },
+      el('span', { className: 'stat-label' }, 'Avg ARV Accuracy'),
+      el('span', { className: 'stat-value' }, avgArvPct.toFixed(1) + '% off'),
+      el('span', { className: 'stat-threshold' }, (arvPassed ? '\u2713' : '\u2717') + ' Need \u2264' + ARV_PASS_THRESHOLD + '%')
+    ));
+    statsDiv.appendChild(el('div', { className: 'stat-item' + (renoPassed ? ' stat-pass' : ' stat-fail') },
+      el('span', { className: 'stat-label' }, 'Avg Reno Accuracy'),
+      el('span', { className: 'stat-value' }, avgRenoPct.toFixed(1) + '% off'),
+      el('span', { className: 'stat-threshold' }, (renoPassed ? '\u2713' : '\u2717') + ' Need \u2264' + RENO_PASS_THRESHOLD + '%')
+    ));
     screen.appendChild(statsDiv);
 
-    // Grade distribution chart
-    screen.appendChild(el('h3', null, 'Grade Distribution'));
-    screen.appendChild(buildGradeDistribution(dist));
-
-    // Property-by-property breakdown table
+    // Breakdown table
     screen.appendChild(el('h3', null, 'Property Breakdown'));
-    screen.appendChild(buildBreakdownTable());
-
-    // Restart
-    screen.appendChild(
-      el(
-        'button',
-        { className: 'btn-primary', onClick: renderStartScreen },
-        'Restart Quiz'
-      )
-    );
-
-    app.appendChild(screen);
-  }
-
-  function gradeDistribution() {
-    var dist = { A: 0, B: 0, C: 0, D: 0, F: 0 };
-    results.forEach(function (r) {
-      dist[r.overallGrade]++;
-    });
-    return dist;
-  }
-
-  function buildGradeDistribution(dist) {
-    var maxCount = Math.max(
-      1,
-      dist.A,
-      dist.B,
-      dist.C,
-      dist.D,
-      dist.F
-    );
-    var chart = el('div', { className: 'grade-chart' });
-
-    ['A', 'B', 'C', 'D', 'F'].forEach(function (g) {
-      var count = dist[g];
-      var pct = (count / maxCount) * 100;
-      var row = el('div', { className: 'grade-chart-row' });
-      row.appendChild(
-        el('span', { className: 'grade-badge ' + gradeClass(g) }, g)
-      );
-      var barOuter = el('div', { className: 'grade-bar-outer' });
-      barOuter.appendChild(
-        el('div', {
-          className: 'grade-bar-fill ' + gradeClass(g) + '-bg',
-          style: { width: pct + '%' },
-        })
-      );
-      row.appendChild(barOuter);
-      row.appendChild(el('span', { className: 'grade-bar-count' }, String(count)));
-      chart.appendChild(row);
-    });
-
-    return chart;
-  }
-
-  function buildBreakdownTable() {
     var table = el('div', { className: 'breakdown-table' });
-
-    // Header
     var header = el('div', { className: 'breakdown-row breakdown-header' });
-    [
-      'Property',
-      'Your ARV',
-      'Actual ARV',
-      'ARV',
-      'Your Reno',
-      'Actual Reno',
-      'Reno',
-      'Overall',
-    ].forEach(function (h) {
+    ['Property', 'Your ARV', 'Actual ARV', 'ARV %', 'Your Reno', 'Actual Reno', 'Reno %'].forEach(function (h) {
       header.appendChild(el('div', { className: 'breakdown-cell' }, h));
     });
     table.appendChild(header);
 
-    // Rows
-    results.forEach(function (r) {
+    moduleResults.forEach(function (r) {
       var row = el('div', { className: 'breakdown-row' });
       var addr = r.property.displayAddress || '\u2014';
-      var shortAddr = addr.length > 30 ? addr.slice(0, 28) + '...' : addr;
-
-      row.appendChild(
-        el('div', { className: 'breakdown-cell breakdown-address' }, shortAddr)
-      );
-      row.appendChild(
-        el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv))
-      );
-      row.appendChild(
-        el(
-          'div',
-          { className: 'breakdown-cell' },
-          formatDollars(r.property.estimatedArv)
-        )
-      );
-      row.appendChild(
-        el(
-          'div',
-          { className: 'breakdown-cell' },
-          el(
-            'span',
-            { className: 'grade-badge ' + gradeClass(r.arvGrade) },
-            r.arvGrade
-          )
-        )
-      );
-      row.appendChild(
-        el('div', { className: 'breakdown-cell' }, formatDollars(r.userReno))
-      );
-      row.appendChild(
-        el(
-          'div',
-          { className: 'breakdown-cell' },
-          formatDollars(r.property.estimatedRenovation)
-        )
-      );
-      row.appendChild(
-        el(
-          'div',
-          { className: 'breakdown-cell' },
-          el(
-            'span',
-            { className: 'grade-badge ' + gradeClass(r.renoGrade) },
-            r.renoGrade
-          )
-        )
-      );
-      row.appendChild(
-        el(
-          'div',
-          { className: 'breakdown-cell' },
-          el(
-            'span',
-            { className: 'grade-badge ' + gradeClass(r.overallGrade) },
-            r.overallGrade
-          )
-        )
-      );
+      var shortAddr = addr.length > 25 ? addr.slice(0, 23) + '...' : addr;
+      row.appendChild(el('div', { className: 'breakdown-cell breakdown-address' }, shortAddr));
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv)));
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedArv)));
+      row.appendChild(el('div', { className: 'breakdown-cell ' + (r.arvPct <= ARV_PASS_THRESHOLD ? 'text-good' : 'text-bad') }, r.arvPct.toFixed(1) + '%'));
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userReno)));
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedRenovation)));
+      row.appendChild(el('div', { className: 'breakdown-cell ' + (r.renoPct <= RENO_PASS_THRESHOLD ? 'text-good' : 'text-bad') }, r.renoPct.toFixed(1) + '%'));
       table.appendChild(row);
     });
+    screen.appendChild(table);
 
-    return table;
+    // Save progress if passed
+    if (modulePassed) {
+      var progress = getProgress();
+      if (progress.completedModules.indexOf(currentModuleIndex) === -1) {
+        progress.completedModules.push(currentModuleIndex);
+        progress.completedModules.sort(function (a, b) { return a - b; });
+        saveProgress(progress);
+      }
+    }
+
+    // Buttons
+    var btnRow = el('div', { className: 'btn-row' });
+    if (!modulePassed) {
+      btnRow.appendChild(el('button', {
+        className: 'btn-primary',
+        onClick: function () { startModule(currentModuleIndex); }
+      }, '\uD83D\uDD01 Retry Module'));
+    }
+    btnRow.appendChild(el('button', {
+      className: modulePassed ? 'btn-primary' : 'btn-secondary',
+      onClick: renderDashboard
+    }, modulePassed ? 'Continue \u2192' : 'Back to Dashboard'));
+    screen.appendChild(btnRow);
+
+    app.appendChild(screen);
+    updateHeaderLevel();
   }
 
   // ---------------------------------------------------------------------------
-  // Screen: History
+  // Screen: Diploma (all modules complete)
   // ---------------------------------------------------------------------------
 
-  function renderHistoryScreen() {
+  function renderDiploma() {
     var app = clearApp();
-    var screen = el('div', { className: 'screen history-screen' });
-    screen.appendChild(el('h1', null, 'Training History'));
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen diploma-screen' });
 
-    var history = getHistory();
-    if (history.length === 0) {
-      screen.appendChild(el('p', null, 'No sessions recorded yet.'));
-    } else {
-      var table = el('div', { className: 'breakdown-table' });
+    var email = getEmail();
+    var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
 
-      var header = el('div', { className: 'breakdown-row breakdown-header' });
-      ['Date', 'Questions', 'Overall', 'Avg ARV % Off', 'Avg Reno % Off'].forEach(
-        function (h) {
-          header.appendChild(el('div', { className: 'breakdown-cell' }, h));
-        }
-      );
-      table.appendChild(header);
-
-      history.forEach(function (s) {
-        var row = el('div', { className: 'breakdown-row' });
-        var d = new Date(s.date);
-        var dateStr =
-          d.toLocaleDateString() +
-          ' ' +
-          d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-        row.appendChild(el('div', { className: 'breakdown-cell' }, dateStr));
-        row.appendChild(
-          el('div', { className: 'breakdown-cell' }, String(s.totalQuestions))
-        );
-        row.appendChild(
-          el(
-            'div',
-            { className: 'breakdown-cell' },
-            el(
-              'span',
-              { className: 'grade-badge ' + gradeClass(s.overallGrade) },
-              s.overallGrade
-            )
-          )
-        );
-        row.appendChild(
-          el('div', { className: 'breakdown-cell' }, s.avgArvPct + '%')
-        );
-        row.appendChild(
-          el('div', { className: 'breakdown-cell' }, s.avgRenoPct + '%')
-        );
-        table.appendChild(row);
-      });
-
-      screen.appendChild(table);
-    }
-
-    screen.appendChild(
-      el(
-        'button',
-        { className: 'btn-secondary', onClick: renderStartScreen },
-        'Back to Start'
+    screen.appendChild(el('div', { className: 'diploma-frame' },
+      el('div', { className: 'diploma-inner' },
+        el('div', { className: 'diploma-top-accent' }),
+        el('p', { className: 'diploma-org' }, 'Rebuilt Realty'),
+        el('h1', { className: 'diploma-title' }, 'Certificate of Completion'),
+        el('div', { className: 'diploma-divider' }),
+        el('p', { className: 'diploma-awarded' }, 'This certifies that'),
+        el('h2', { className: 'diploma-name' }, name),
+        el('p', { className: 'diploma-achievement' }, 'has successfully completed all ' + MODULES_COUNT + ' modules of the'),
+        el('h3', { className: 'diploma-program' }, 'ARV Mastery Training Program'),
+        el('p', { className: 'diploma-subtitle' }, 'and is hereby recognized as a'),
+        el('div', { className: 'diploma-badge' }, '\uD83C\uDF93'),
+        el('h2', { className: 'diploma-level' }, 'Rebuilt Certified ARV Pro'),
+        el('div', { className: 'diploma-divider' }),
+        el('p', { className: 'diploma-date' }, new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })),
+        el('p', { className: 'diploma-email' }, email)
       )
-    );
+    ));
+
+    screen.appendChild(el('div', { className: 'diploma-cta' },
+      el('p', { className: 'diploma-instruction' }, '\uD83D\uDCF8 Screenshot this certificate and post it to the #team-wins Slack channel!'),
+      el('p', { className: 'diploma-subtext' }, 'Show the team you\u2019re a certified ARV Pro.')
+    ));
+
+    var btnRow = el('div', { className: 'btn-row' });
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: function () {
+        // Reset and go back to dashboard
+        var progress = getProgress();
+        progress.completedModules = [];
+        saveProgress(progress);
+        try { localStorage.removeItem(STORAGE_PROP_ORDER); } catch (_) {}
+        renderDashboard();
+      }
+    }, '\uD83D\uDD04 Reset & Start Over'));
+    screen.appendChild(btnRow);
+
     app.appendChild(screen);
   }
 
@@ -1077,5 +1121,25 @@
   // Boot
   // ---------------------------------------------------------------------------
 
-  document.addEventListener('DOMContentLoaded', renderStartScreen);
+  document.addEventListener('DOMContentLoaded', function () {
+    var email = getEmail();
+    if (!email) {
+      renderSignIn();
+    } else if (!isPresentationDone()) {
+      renderPresentation();
+    } else {
+      // Pre-load properties
+      loadProperties().then(function () {
+        var progress = getProgress();
+        if (progress.completedModules.length >= MODULES_COUNT) {
+          renderDiploma();
+        } else {
+          renderDashboard();
+        }
+      }).catch(function () {
+        renderDashboard();
+      });
+    }
+  });
+
 })();

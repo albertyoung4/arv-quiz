@@ -7,11 +7,27 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=3">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
 </head>
 <body>
+  <!-- Persistent header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="header-logo">
+        <svg viewBox="0 0 40 44" width="32" height="35" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="22" y="0" width="14" height="40" rx="2" fill="#29ABE2"/>
+          <rect x="4" y="8" width="14" height="32" rx="2" fill="#5BC4F0"/>
+          <path d="M11 24 L20 17 L29 24 L29 40 L22 40 L22 32 L18 32 L18 40 L11 40 Z" fill="#29ABE2"/>
+          <rect x="18" y="26" width="4" height="4" rx="0.5" fill="white" opacity="0.9"/>
+        </svg>
+        <span class="header-brand">rebuilt</span>
+      </div>
+      <div class="header-level" id="header-level"></div>
+    </div>
+  </header>
+
   <div id="app"></div>
-  <script src="app.js"></script>
+  <script src="app.js?v=3"></script>
 </body>
 </html>
