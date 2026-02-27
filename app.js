@@ -832,6 +832,32 @@
     } catch (_) {}
   }
 
+  // Post diploma completion to Slack via Apps Script
+  var STORAGE_SLACK_POSTED = 'rebuilt_arv_slack_posted';
+
+  function postDiplomaToSlack() {
+    // Only post once per user
+    try { if (localStorage.getItem(STORAGE_SLACK_POSTED) === 'true') return; } catch (_) {}
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+
+    var email = getEmail() || '';
+    var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+
+    try {
+      fetch(SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify({
+          action: 'slackDiploma',
+          name: name,
+          email: email,
+        }),
+      });
+      localStorage.setItem(STORAGE_SLACK_POSTED, 'true');
+    } catch (_) { /* silent fail */ }
+  }
+
   // ---------------------------------------------------------------------------
   // Screen: Sign In
   // ---------------------------------------------------------------------------
@@ -2153,6 +2179,9 @@
     updateHeaderLevel();
     var screen = el('div', { className: 'screen diploma-screen' });
 
+    // Post to Slack (once)
+    postDiplomaToSlack();
+
     var email = getEmail();
     var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
 
@@ -2176,8 +2205,8 @@
     ));
 
     screen.appendChild(el('div', { className: 'diploma-cta' },
-      el('p', { className: 'diploma-instruction' }, '\uD83D\uDCF8 Screenshot this certificate and post it to the #team-wins Slack channel!'),
-      el('p', { className: 'diploma-subtext' }, 'Show the team you\u2019re a certified ARV Pro.')
+      el('p', { className: 'diploma-instruction' }, '\uD83C\uDF89 Your achievement has been posted to #praisewall!'),
+      el('p', { className: 'diploma-subtext' }, 'The team knows you\u2019re a certified ARV Pro.')
     ));
 
     var btnRow = el('div', { className: 'btn-row' });
@@ -2190,6 +2219,7 @@
         saveProgress(progress);
         try { localStorage.removeItem(STORAGE_PROP_ORDER); } catch (_) {}
         try { localStorage.removeItem(STORAGE_COMP_DONE); } catch (_) {}
+        try { localStorage.removeItem(STORAGE_SLACK_POSTED); } catch (_) {}
         renderDashboard();
       }
     }, '\uD83D\uDD04 Reset & Start Over'));
