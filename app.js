@@ -3086,6 +3086,41 @@
       form.appendChild(renoGroup);
     }
 
+    // Admin answer hints
+    if (isAdmin()) {
+      var correctArvText = '$' + prop.estimatedArv.toLocaleString();
+      var correctRenoText = '$' + prop.estimatedRenovation.toLocaleString();
+      if (arvIsGraded) correctArvText += ' (Grade ' + arvChoices.correctGrade + ')';
+      if (renoIsGraded) correctRenoText += ' (Grade ' + getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES) + ')';
+      var adminBanner = el('div', { className: 'admin-answer-banner' },
+        el('span', { className: 'admin-answer-icon' }, '\uD83D\uDD11'),
+        el('span', null, 'Admin \u2014 ARV: ' + correctArvText + '  |  Reno: ' + correctRenoText)
+      );
+      form.insertBefore(adminBanner, form.firstChild);
+
+      // Highlight correct grade buttons for graded modes
+      if (arvIsGraded) {
+        var arvBtns = form.querySelectorAll('.grade-selector-group:first-child .grade-option');
+        arvBtns.forEach(function (btn) {
+          var letterEl = btn.querySelector('.grade-option-letter');
+          if (letterEl && letterEl.textContent.trim() === arvChoices.correctGrade) {
+            btn.classList.add('admin-highlight-correct');
+          }
+        });
+      }
+      if (renoIsGraded) {
+        var correctRenoGradeVal = getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES);
+        var renoGroups = form.querySelectorAll('.grade-selector-group');
+        var renoGroup = renoGroups[renoGroups.length - 1];
+        renoGroup.querySelectorAll('.grade-option').forEach(function (btn) {
+          var letterEl = btn.querySelector('.grade-option-letter');
+          if (letterEl && letterEl.textContent.trim() === correctRenoGradeVal) {
+            btn.classList.add('admin-highlight-correct');
+          }
+        });
+      }
+    }
+
     var gradeError = el('p', { className: 'grade-select-error', style: { display: 'none' } }, 'Please select a grade for each category.');
     form.appendChild(gradeError);
 
