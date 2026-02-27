@@ -1216,6 +1216,21 @@
     });
 
     screen.appendChild(grid);
+
+    // History & Leaderboard quick-access buttons
+    if (getEmail()) {
+      var quickLinks = el('div', { className: 'dash-actions', style: { marginTop: '2rem' } });
+      quickLinks.appendChild(el('button', {
+        className: 'btn-secondary btn-small',
+        onClick: function () { renderHistory(); }
+      }, '\uD83D\uDCCA History'));
+      quickLinks.appendChild(el('button', {
+        className: 'btn-secondary btn-small',
+        onClick: function () { renderLeaderboard(); }
+      }, '\uD83C\uDFC6 Leaderboard'));
+      screen.appendChild(quickLinks);
+    }
+
     app.appendChild(screen);
   }
 
