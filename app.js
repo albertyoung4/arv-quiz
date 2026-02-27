@@ -139,8 +139,20 @@
           title: '4 Pillars Mastery',
           desc: 'Property lookup, prospecting scripts, and the four pillars of acquisition: Condition, Location, Comps, and Motivation.',
           videos: [
-            { fileId: '1i2gKYQSB32mwG3qGxTHMysyUQ0wyhoLB', title: 'Property Lookup, Process & Scripts (Part 1)' },
-            { fileId: '1NENvaDHkXZwXeI8OavE7bueHeDtXSH4z', title: 'Property Lookup, Process & Scripts (Part 2)' },
+            { fileId: '1i2gKYQSB32mwG3qGxTHMysyUQ0wyhoLB', title: 'Property Lookup, Process & Scripts (Part 1)',
+              checks: [
+                { q: 'When a new lead comes in, what is your very first step?', choices: ['Call the seller immediately', 'Look up the property in APv2 to gather basic info', 'Drive to the property', 'Send a PandaDoc agreement'], answer: 1 },
+                { q: 'What tool is primarily used for property lookups in the acquisition process?', choices: ['Zillow', 'Realtor.com', 'APv2 (Property Lookup)', 'Google Maps'], answer: 2 },
+                { q: '🎭 Role Play: A seller picks up and says "I\'m not interested." Your best response is:', choices: ['"OK, sorry to bother you" and hang up', '"I understand — I\'m just reaching out because we buy homes in your area. Would it be OK if I asked a couple quick questions?"', '"We\'ll pay cash above market value!"', '"Can I speak to someone else in the household?"'], answer: 1 },
+              ]
+            },
+            { fileId: '1NENvaDHkXZwXeI8OavE7bueHeDtXSH4z', title: 'Property Lookup, Process & Scripts (Part 2)',
+              checks: [
+                { q: 'What are the 4 Pillars of property acquisition?', choices: ['Price, Location, Size, Age', 'Condition, Location, Comps, Motivation', 'ARV, Reno, Profit, Timeline', 'Bedrooms, Bathrooms, Sqft, Lot'], answer: 1 },
+                { q: 'Which pillar helps you determine the renovation cost and ultimately your offer price?', choices: ['Location', 'Comps', 'Condition', 'Motivation'], answer: 2 },
+                { q: '🎭 Role Play: You\'re assessing a lead and the seller says "The house is in great shape, just needs paint." What pillar are you gathering info on?', choices: ['Motivation — they want to sell fast', 'Location — neighborhood quality', 'Condition — current state of repairs needed', 'Comps — comparable sale prices'], answer: 2 },
+              ]
+            },
           ]
         },
         {
@@ -148,7 +160,13 @@
           title: 'Setting the Stage Protocol',
           desc: 'Setting up your acquisition dashboard, understanding ready-to-sell time, and protecting your leads.',
           videos: [
-            { fileId: '1Eqk7RFjt4wYMtj5gGt4XRzeifon7dCyv', title: 'Acq Assoc Dash, Ready-To-Sell Time & Lead Protection' },
+            { fileId: '1Eqk7RFjt4wYMtj5gGt4XRzeifon7dCyv', title: 'Acq Assoc Dash, Ready-To-Sell Time & Lead Protection',
+              checks: [
+                { q: 'What does "ready-to-sell time" measure?', choices: ['Days on MLS', 'Time between a lead entering the system and being seller-ready to transact', 'How fast you can close', 'Average days on market in the area'], answer: 1 },
+                { q: 'Why is lead protection important in acquisition?', choices: ['It hides data from competitors', 'It ensures your leads aren\'t reassigned and your pipeline stays intact', 'It encrypts seller info', 'It blocks other agents from calling'], answer: 1 },
+                { q: '🎭 Role Play: A colleague asks you to hand over one of your warm leads because they "have more experience." What do you do?', choices: ['Give them the lead — they know better', 'Politely decline and explain lead protection protocols exist for a reason', 'Ignore them', 'Escalate immediately to management'], answer: 1 },
+              ]
+            },
           ]
         },
         {
@@ -156,8 +174,19 @@
           title: 'Condition Discovery',
           desc: 'HubSpot appointment scheduling, prospect calling techniques, and discovering property condition through conversation.',
           videos: [
-            { fileId: '1lH3NJtw3xRA9S3ZZWEiQRptpG7qY8eLz', title: 'HS Training + Appointment Scheduled' },
-            { fileId: '1vVqWTzxVlsDShRA92Gq1Vz82rOpRNeQe', title: 'Prospect Calling Debrief' },
+            { fileId: '1lH3NJtw3xRA9S3ZZWEiQRptpG7qY8eLz', title: 'HS Training + Appointment Scheduled',
+              checks: [
+                { q: 'What does the HubSpot "Appointment Scheduled" status indicate?', choices: ['The seller accepted an offer', 'A meeting has been set to discuss the property further', 'The inspection is scheduled', 'The closing date is set'], answer: 1 },
+                { q: 'What is the primary goal of the initial prospect call?', choices: ['Make an offer immediately', 'Schedule an appointment and gather basic property/motivation info', 'Negotiate the lowest price possible', 'Get the seller to sign a contract'], answer: 1 },
+              ]
+            },
+            { fileId: '1vVqWTzxVlsDShRA92Gq1Vz82rOpRNeQe', title: 'Prospect Calling Debrief',
+              checks: [
+                { q: 'During condition discovery, what should you establish FIRST with a seller?', choices: ['Their asking price', 'Their timeline and motivation for selling', 'The property square footage', 'Whether they have a mortgage'], answer: 1 },
+                { q: '🎭 Role Play: A seller says "I don\'t really need to sell, I\'m just curious what it\'s worth." Best response:', choices: ['"OK, let me send you a Zestimate"', '"No problem — a lot of homeowners like to know their options. What would make it worth considering an offer?"', '"We only work with serious sellers, sorry"', '"I\'ll call back when you\'re ready"'], answer: 1 },
+                { q: 'Why is documenting property condition important during discovery?', choices: ['It helps determine renovation cost which affects your offer price', 'It\'s required by law', 'It replaces the need for an inspection', 'It\'s only needed for FHA loans'], answer: 0 },
+              ]
+            },
           ]
         }
       ],
@@ -186,7 +215,13 @@
           title: 'The 60-Second Silence',
           desc: 'Anchoring strategy, using 65-70% of MAO to set expectations, and the power of silence after presenting a number.',
           videos: [
-            { fileId: '1swinFDQiiA6n7WTQsTdQ1daJcjRNQvAU', title: 'Deep Dive: Negotiation' },
+            { fileId: '1swinFDQiiA6n7WTQsTdQ1daJcjRNQvAU', title: 'Deep Dive: Negotiation',
+              checks: [
+                { q: 'When anchoring a seller, what percentage of MAO should you use as your opening question?', choices: ['90-95%', '80-85%', '65-70%', '50-55%'], answer: 2 },
+                { q: 'After presenting your number to the seller, you should:', choices: ['Immediately explain why it\'s fair', 'Stay silent and let the seller respond first', 'Offer to go higher if they seem upset', 'Change the subject to repairs'], answer: 1 },
+                { q: '🎭 Role Play: You tell the seller "Based on our analysis, we\'re looking at around $147,000." They go quiet. What do you do?', choices: ['Say "Hello? Are you still there?"', 'Immediately offer more: "But we might be able to go higher"', 'Stay silent — let them process and respond first (the 60-second silence)', 'Explain all the repairs to justify the low number'], answer: 2 },
+              ]
+            },
           ]
         },
         {
@@ -194,8 +229,18 @@
           title: 'Odd Number Pricing',
           desc: 'Understanding the comp plan, snap comp quizzes, and using precise odd numbers to convey research-backed offers.',
           videos: [
-            { fileId: '1xu-o6sH1LjlB4hiqCHAXcUt_aebHFXaj', title: 'Comp Plan Overview' },
-            { fileId: '18RZ-u3iScQcdkaaKjtOoVskiNiv9aj8Y', title: 'Snap Comp Quiz' },
+            { fileId: '1xu-o6sH1LjlB4hiqCHAXcUt_aebHFXaj', title: 'Comp Plan Overview',
+              checks: [
+                { q: 'Why use odd numbers (e.g., $147,300) instead of round numbers in offers?', choices: ['It\'s required by the firm', 'Odd numbers signal thorough research and analysis, making the offer feel precise', 'Round numbers are bad luck', 'It confuses the seller into accepting'], answer: 1 },
+                { q: 'What does the comp plan help determine?', choices: ['The seller\'s mortgage balance', 'The property\'s fair market value based on comparable sales', 'The inspection timeline', 'The commission structure'], answer: 1 },
+              ]
+            },
+            { fileId: '18RZ-u3iScQcdkaaKjtOoVskiNiv9aj8Y', title: 'Snap Comp Quiz',
+              checks: [
+                { q: 'What is the purpose of snap comp quizzes?', choices: ['To test typing speed', 'To rapidly assess comparable values and sharpen your pricing instincts', 'To memorize addresses', 'To practice using calculators'], answer: 1 },
+                { q: '🎭 Role Play: You need to price a 3bed/2bath 1,400 sqft ranch. Comps show $130/sqft for similar renovated homes. Your best quick estimate is:', choices: ['$200,000 (round number sounds professional)', '$182,000 (1,400 × $130)', '$150,000 (lowball to leave room)', '$182,700 (precise odd number based on analysis)'], answer: 3 },
+              ]
+            },
           ]
         },
         {
@@ -203,7 +248,13 @@
           title: 'Conditional Flexibility',
           desc: 'The give-to-get approach: using repair estimates, timelines, and seller concessions as negotiation levers.',
           videos: [
-            { fileId: '13wls_1lu9ZgTwv7jKaMPcPzc0IZGdJH1', title: 'Comp Practice & Q&A' },
+            { fileId: '13wls_1lu9ZgTwv7jKaMPcPzc0IZGdJH1', title: 'Comp Practice & Q&A',
+              checks: [
+                { q: 'What is the "give-to-get" strategy in conditional flexibility?', choices: ['Giving the seller a gift card', 'Offering concessions on timeline or terms in exchange for a lower price', 'Giving the property back for a refund', 'Lowering your commission'], answer: 1 },
+                { q: '🎭 Role Play: A seller says "I need at least $180,000." Your offer is $165,000. Using conditional flexibility, your best response is:', choices: ['"Sorry, that\'s our final number"', '"OK, $180,000 it is"', '"If we could close in 10 days and cover all closing costs, would $170,000 work for you?"', '"Let me talk to my manager about that"'], answer: 2 },
+                { q: 'How do repair estimates serve as negotiation levers?', choices: ['They are irrelevant to price', 'Positives support higher offers from the firm; negatives help manage seller expectations on price', 'They only matter for insurance', 'They replace the need for an appraisal'], answer: 1 },
+              ]
+            },
           ]
         }
       ],
@@ -232,8 +283,19 @@
           title: '7-Step Objection Sequence',
           desc: 'Role play practice for handling the most common seller objections with a structured 7-step sequence.',
           videos: [
-            { fileId: '1NteJkJwLh0w5eE34JbhCyZFXzIexg5Tz', title: 'Role Plays: Sales Script (Session 1)' },
-            { fileId: '1nyx2v3R4wzkFTwWo7PqQDJ0hjGd_7z8B', title: 'Role Plays: Sales Script (Session 2)' },
+            { fileId: '1NteJkJwLh0w5eE34JbhCyZFXzIexg5Tz', title: 'Role Plays: Sales Script (Session 1)',
+              checks: [
+                { q: 'What is the first step in the 7-Step Objection Sequence?', choices: ['Counter with a higher offer', 'Acknowledge the objection and empathize with the seller', 'Ask to speak with their spouse', 'Offer to pay closing costs'], answer: 1 },
+                { q: '🎭 Role Play: Seller says "I need to think about it." Your best response:', choices: ['"OK, take your time" and hang up', '"I completely understand. Just so I can help — what specifically would you want to think through?"', '"The offer expires at midnight tonight"', '"Let me raise the price by $5,000"'], answer: 1 },
+              ]
+            },
+            { fileId: '1nyx2v3R4wzkFTwWo7PqQDJ0hjGd_7z8B', title: 'Role Plays: Sales Script (Session 2)',
+              checks: [
+                { q: 'When a seller shows even a small amount of flexibility during negotiation, you should:', choices: ['Accept their terms immediately', 'Continue negotiating — small flexibility often leads to larger concessions', 'Walk away since they\'re difficult', 'Report them to your manager'], answer: 1 },
+                { q: '🎭 Role Play: Seller says "Another buyer offered me $200,000." The best response is:', choices: ['"We\'ll match that offer"', '"That buyer is probably lying"', '"I hear you. Can I ask — did they give you a firm written offer? Because we can close in 14 days with no contingencies, which a lot of sellers find is worth more than a higher number that may fall through."', '"OK, good luck with them"'], answer: 2 },
+                { q: 'In a competitive bid situation, what advantages should you emphasize beyond price?', choices: ['Your personal charm', 'Certainty of close, speed, and flexibility', 'That the other buyer is untrustworthy', 'That you\'ll waive the inspection entirely'], answer: 1 },
+              ]
+            },
           ]
         },
         {
@@ -241,8 +303,18 @@
           title: 'Reframing Value',
           desc: 'Guided call reviews and calling debriefs: learn to reframe your offer as the best solution for the seller\'s situation.',
           videos: [
-            { fileId: '1dVhpNO-mCjt_mc3xM6fDVNElCBrXMZGV', title: 'Guided Call Review' },
-            { fileId: '1IPtzdTMu546zhoTSRcFusAiAaQy_CY0b', title: 'Calling Debrief (Session 1)' },
+            { fileId: '1dVhpNO-mCjt_mc3xM6fDVNElCBrXMZGV', title: 'Guided Call Review',
+              checks: [
+                { q: 'What is the main purpose of a guided call review?', choices: ['To criticize the caller', 'To identify specific moments where different tactics could have improved the outcome', 'To listen to recordings for fun', 'To check scripts were read word-for-word'], answer: 1 },
+                { q: 'When reviewing a call, what should you focus on?', choices: ['How fast the rep talked', 'Key decision points where the seller\'s response could have been guided differently', 'Whether the rep used the exact script', 'How many times the rep said "um"'], answer: 1 },
+              ]
+            },
+            { fileId: '1IPtzdTMu546zhoTSRcFusAiAaQy_CY0b', title: 'Calling Debrief (Session 1)',
+              checks: [
+                { q: '"Reframing value" in acquisition means:', choices: ['Changing the picture frames in the house', 'Repositioning your offer to highlight how it solves the seller\'s specific problem', 'Adjusting the ARV calculation', 'Refinancing the property'], answer: 1 },
+                { q: '🎭 Role Play: Seller says "My neighbor sold for $50,000 more than your offer." Best reframe:', choices: ['"Your house isn\'t as nice as your neighbor\'s"', '"That\'s a great data point. Was their home fully updated? Our offer reflects the current condition and saves you the $30K+ in repairs, 6 months of holding costs, and the hassle of contractors."', '"OK, we\'ll match that price"', '"The market has dropped since then"'], answer: 1 },
+              ]
+            },
           ]
         },
         {
@@ -250,8 +322,19 @@
           title: 'Retrade Setup',
           desc: 'Contract-to-close overview, handling competitive bids, and setting up retrades using underwriting as leverage.',
           videos: [
-            { fileId: '1wsOpZGuwhRP6ypOD60KKYknyxyx0I3rZ', title: 'C2C (Contract-to-Close) Overview' },
-            { fileId: '1egkKivRW6dYupi0eXZSfoGpKHOUMgRE7', title: 'Calling Debrief (Session 2)' },
+            { fileId: '1wsOpZGuwhRP6ypOD60KKYknyxyx0I3rZ', title: 'C2C (Contract-to-Close) Overview',
+              checks: [
+                { q: 'What does C2C stand for in the acquisition process?', choices: ['Cost to Customer', 'Contract-to-Close: the process from signed agreement to finalizing the deal', 'Cash to Cash flow', 'Comp to Comp analysis'], answer: 1 },
+                { q: 'In a retrade, the price reduction should be positioned as coming from:', choices: ['Your personal decision', 'The underwriting/inspection findings from the firm', 'A competing buyer', 'The city building department'], answer: 1 },
+              ]
+            },
+            { fileId: '1egkKivRW6dYupi0eXZSfoGpKHOUMgRE7', title: 'Calling Debrief (Session 2)',
+              checks: [
+                { q: 'What is the "hero" strategy in negotiation?', choices: ['Pretending to be a superhero', 'Anchoring low, then coming back as if you fought for a higher price, making the seller feel you advocated for them', 'Always offering the highest price', 'Saving the deal at the last minute'], answer: 1 },
+                { q: '🎭 Role Play: Inspection reveals a cracked foundation ($25K repair). The seller\'s contract price is $175K. How do you position the retrade?', choices: ['"We\'re dropping the price to $150K, take it or leave it"', '"The inspection found a foundation issue. I went to bat for you with underwriting, and the best I could get them to approve is $158,000. I know it\'s not what we hoped, but this still gets you a clean close in two weeks."', '"We\'re canceling the deal"', '"Can you fix the foundation before we close?"'], answer: 1 },
+                { q: 'When should you walk away from a negotiation?', choices: ['Never — always close the deal', 'When the seller draws a hard line and shows zero flexibility on price', 'After the first objection', 'Only if your manager tells you to'], answer: 1 },
+              ]
+            },
           ]
         }
       ],
@@ -1287,17 +1370,52 @@
     app.appendChild(screen);
   }
 
+  var VIDEO_MIN_SECONDS = 180; // 3 minutes minimum before check questions unlock
+  var _videoTimers = {};        // tracks elapsed time per video { fileId: { start, intervalId } }
+
+  function startVideoTimer(fileId, timerEl, checkSection) {
+    if (_videoTimers[fileId]) return; // already running
+    var start = Date.now();
+    _videoTimers[fileId] = { start: start, intervalId: null };
+    var update = function () {
+      var elapsed = Math.floor((Date.now() - start) / 1000);
+      var remaining = VIDEO_MIN_SECONDS - elapsed;
+      if (remaining <= 0) {
+        clearInterval(_videoTimers[fileId].intervalId);
+        timerEl.textContent = '';
+        timerEl.style.display = 'none';
+        checkSection.style.display = 'block';
+        checkSection.classList.add('check-visible');
+      } else {
+        var mins = Math.floor(remaining / 60);
+        var secs = remaining % 60;
+        timerEl.textContent = '\u23F3 Questions unlock in ' + mins + ':' + (secs < 10 ? '0' : '') + secs;
+      }
+    };
+    _videoTimers[fileId].intervalId = setInterval(update, 1000);
+    update();
+  }
+
+  function clearVideoTimers() {
+    Object.keys(_videoTimers).forEach(function (k) {
+      if (_videoTimers[k].intervalId) clearInterval(_videoTimers[k].intervalId);
+    });
+    _videoTimers = {};
+  }
+
   function renderSalesModule(levelIndex, moduleIndex) {
+    clearVideoTimers();
     var level = SALES_COURSE[levelIndex];
     var mod = level.modules[moduleIndex];
     var p = getSalesProgress();
+    var admin = isAdmin();
     var app = clearApp();
     var screen = el('div', { className: 'screen sales-module-screen' });
 
     // Back to level
     screen.appendChild(el('button', {
       className: 'btn-secondary sales-back-btn',
-      onClick: function () { renderSalesLevelDash(levelIndex); }
+      onClick: function () { clearVideoTimers(); renderSalesLevelDash(levelIndex); }
     }, '\u2190 Back to ' + level.title));
 
     screen.appendChild(el('div', { className: 'sales-module-num' }, 'Module ' + (moduleIndex + 1) + ' of ' + level.modules.length));
@@ -1323,16 +1441,107 @@
       videoCard.appendChild(iframeWrapper);
 
       if (!watched) {
-        var markBtn = el('button', {
-          className: 'btn-primary sales-mark-watched-btn',
-          onClick: (function (fid) {
-            return function () {
-              markVideoWatched(level.id, fid);
-              renderSalesModule(levelIndex, moduleIndex);
-            };
-          })(v.fileId)
-        }, '\u2705 Mark as Watched');
-        videoCard.appendChild(markBtn);
+        // --- Admin: quick bypass ---
+        if (admin) {
+          var adminRow = el('div', { className: 'video-admin-row' });
+          adminRow.appendChild(el('button', {
+            className: 'btn-primary sales-admin-skip-btn',
+            onClick: (function (fid) {
+              return function () {
+                markVideoWatched(level.id, fid);
+                renderSalesModule(levelIndex, moduleIndex);
+              };
+            })(v.fileId)
+          }, '\u26A1 Admin: Mark Watched'));
+          videoCard.appendChild(adminRow);
+        }
+
+        // --- Timer countdown ---
+        var timerEl = el('div', { className: 'video-timer' });
+        videoCard.appendChild(timerEl);
+
+        // --- Check questions section (hidden until timer expires or admin) ---
+        var checkSection = el('div', { className: 'video-check-section' });
+        if (!admin) checkSection.style.display = 'none';
+
+        if (v.checks && v.checks.length > 0) {
+          checkSection.appendChild(el('h3', { className: 'video-check-heading' }, '\uD83E\uDDE0 Comprehension Check'));
+          if (admin) {
+            checkSection.appendChild(el('div', { className: 'admin-answer-banner' },
+              '\uD83D\uDD11 Admin: correct answers highlighted in green'));
+          }
+          var checkSelected = {};
+          var checkForm = el('div', { className: 'video-check-form' });
+
+          v.checks.forEach(function (ck, ckIdx) {
+            var qBlock = el('div', { className: 'video-check-q' });
+            qBlock.appendChild(el('p', { className: 'video-check-q-text' }, (ckIdx + 1) + '. ' + ck.q));
+
+            var opts = el('div', { className: 'video-check-opts' });
+            ck.choices.forEach(function (choice, cIdx) {
+              var optLabel = el('label', { className: 'video-check-opt' + (admin && cIdx === ck.answer ? ' admin-highlight-correct' : '') });
+              var radio = document.createElement('input');
+              radio.type = 'radio';
+              radio.name = 'vc-' + vidIdx + '-' + ckIdx;
+              radio.value = cIdx;
+              radio.addEventListener('change', function () { checkSelected[ckIdx] = cIdx; });
+              optLabel.appendChild(radio);
+              optLabel.appendChild(document.createTextNode(' ' + choice));
+              opts.appendChild(optLabel);
+            });
+            qBlock.appendChild(opts);
+            qBlock.appendChild(el('div', { className: 'video-check-feedback', id: 'vcfb-' + vidIdx + '-' + ckIdx }));
+            checkForm.appendChild(qBlock);
+          });
+          checkSection.appendChild(checkForm);
+
+          // Submit check button
+          var checkSubmit = el('button', {
+            className: 'btn-primary video-check-submit',
+            onClick: (function (video, vi, sel, formEl) {
+              return function () {
+                var allCorrect = true;
+                video.checks.forEach(function (ck, ckIdx) {
+                  var fb = document.getElementById('vcfb-' + vi + '-' + ckIdx);
+                  var qBlock = fb.parentNode;
+                  if (sel[ckIdx] === ck.answer) {
+                    fb.textContent = '\u2705 Correct!';
+                    fb.className = 'video-check-feedback correct';
+                    qBlock.classList.remove('incorrect');
+                    qBlock.classList.add('correct');
+                  } else {
+                    allCorrect = false;
+                    fb.textContent = '\u274C Try again';
+                    fb.className = 'video-check-feedback incorrect';
+                    qBlock.classList.remove('correct');
+                    qBlock.classList.add('incorrect');
+                  }
+                });
+                if (allCorrect) {
+                  markVideoWatched(level.id, video.fileId);
+                  // Brief celebration then re-render
+                  var btn = this;
+                  btn.textContent = '\uD83C\uDF89 All correct! Video complete!';
+                  btn.classList.add('check-passed');
+                  btn.disabled = true;
+                  setTimeout(function () {
+                    renderSalesModule(levelIndex, moduleIndex);
+                  }, 1200);
+                }
+              };
+            })(v, vidIdx, checkSelected, checkForm)
+          }, 'Submit Answers');
+          checkSection.appendChild(checkSubmit);
+        }
+
+        videoCard.appendChild(checkSection);
+
+        // Start timer for non-admin users (admin sees checks immediately)
+        if (!admin) {
+          startVideoTimer(v.fileId, timerEl, checkSection);
+        } else {
+          timerEl.style.display = 'none';
+        }
       }
 
       screen.appendChild(videoCard);
@@ -1347,7 +1556,7 @@
     } else {
       screen.appendChild(el('button', {
         className: 'btn-primary sales-next-btn',
-        onClick: function () { renderSalesLevelDash(levelIndex); }
+        onClick: function () { clearVideoTimers(); renderSalesLevelDash(levelIndex); }
       }, 'Back to Level Dashboard \u2192'));
     }
 
