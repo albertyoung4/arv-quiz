@@ -1505,6 +1505,273 @@ body {
 }
 
 /* ========================================
+   Comp Analysis Intro Module
+   ======================================== */
+
+/* Intro screen */
+.comp-intro-screen {
+  max-width: 680px;
+  margin: 0 auto;
+  text-align: center;
+}
+.comp-intro-screen h1 { margin-bottom: .25rem; }
+.comp-intro-screen > p { color: var(--gray-500); margin-bottom: 1.5rem; }
+
+/* 4-3-2-1 Rules recap */
+.comp-rules-recap {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+.comp-rules-recap h3 {
+  font-size: .95rem;
+  margin-bottom: .75rem;
+  color: var(--gray-700);
+}
+.comp-rules-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .5rem;
+}
+.comp-rule-item {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  font-size: .85rem;
+  color: var(--gray-600);
+  padding: .4rem .6rem;
+  background: white;
+  border-radius: 6px;
+  border: 1px solid var(--gray-200);
+}
+.comp-rule-item strong {
+  color: var(--primary);
+  font-size: 1rem;
+  min-width: 1.5rem;
+}
+
+/* Subject & Comp property cards */
+.comp-subject-card,
+.comp-potential-card {
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: .75rem;
+  text-align: left;
+}
+.comp-subject-card {
+  background: rgba(41, 171, 226, .06);
+  border: 2px solid var(--primary);
+}
+.comp-potential-card {
+  background: rgba(245, 158, 11, .06);
+  border: 2px solid #f59e0b;
+}
+.comp-card-badge {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  padding: .2rem .6rem;
+  border-radius: 4px;
+  margin-bottom: .5rem;
+  color: white;
+  background: var(--primary);
+}
+.comp-badge-potential { background: #f59e0b; }
+.comp-card-address {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin-bottom: .6rem;
+}
+.comp-card-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: .4rem;
+  font-size: .8rem;
+}
+.comp-card-stats span {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  padding: .3rem .4rem;
+  text-align: center;
+}
+.comp-card-stats strong {
+  display: block;
+  font-size: .7rem;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  margin-bottom: .15rem;
+}
+.comp-sale-info {
+  margin-top: .6rem;
+  font-size: .85rem;
+  color: var(--gray-600);
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.comp-active-badge {
+  background: #ef4444;
+  color: white;
+  font-size: .7rem;
+  font-weight: 700;
+  padding: .15rem .5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* VS divider */
+.comp-vs-divider {
+  text-align: center;
+  font-size: .85rem;
+  font-weight: 800;
+  color: var(--gray-400);
+  margin: .5rem 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+/* Issues form (checkboxes) */
+.comp-issues-form {
+  text-align: left;
+  margin-top: 1rem;
+}
+.comp-issues-form h3 {
+  font-size: .95rem;
+  margin-bottom: .6rem;
+  color: var(--gray-700);
+}
+.comp-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .5rem .75rem;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  margin-bottom: .35rem;
+  cursor: pointer;
+  font-size: .85rem;
+  transition: background .15s, border-color .15s;
+}
+.comp-checkbox-label:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-300);
+}
+.comp-checkbox-label input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+/* Good Comp toggle button */
+.comp-good-btn {
+  display: block;
+  width: 100%;
+  margin-top: .5rem;
+  padding: .65rem 1rem;
+  border: 2px dashed #22c55e;
+  border-radius: 8px;
+  background: transparent;
+  color: #22c55e;
+  font-weight: 700;
+  font-size: .9rem;
+  cursor: pointer;
+  transition: all .15s;
+}
+.comp-good-btn:hover { background: rgba(34, 197, 94, .06); }
+.comp-good-selected {
+  background: #22c55e !important;
+  color: white !important;
+  border-style: solid;
+}
+
+/* Error text */
+.comp-error {
+  color: #ef4444;
+  font-size: .8rem;
+  margin-top: .5rem;
+}
+
+/* Scenario results */
+.comp-result-item {
+  text-align: left;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: .75rem;
+}
+.comp-result-good { border-left: 4px solid #22c55e; }
+.comp-result-bad { border-left: 4px solid #ef4444; }
+.comp-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: .4rem;
+}
+.comp-result-header strong { font-size: .95rem; }
+.comp-result-answer {
+  font-size: .8rem;
+  color: var(--gray-500);
+  margin-bottom: .3rem;
+}
+.comp-result-issues {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .3rem;
+  margin-top: .3rem;
+}
+.comp-result-issue {
+  font-size: .75rem;
+  padding: .2rem .5rem;
+  border-radius: 4px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+.comp-result-explain {
+  font-size: .8rem;
+  color: var(--gray-500);
+  margin-top: .4rem;
+  font-style: italic;
+}
+
+/* Dashboard intro card */
+.comp-intro-card {
+  border: 2px solid var(--primary) !important;
+  background: rgba(41, 171, 226, .04) !important;
+}
+
+/* Scenario progress indicator */
+.comp-progress {
+  display: flex;
+  justify-content: center;
+  gap: .4rem;
+  margin-bottom: 1rem;
+}
+.comp-progress-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--gray-200);
+}
+.comp-progress-dot.done { background: #22c55e; }
+.comp-progress-dot.active { background: var(--primary); }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .comp-rules-grid { grid-template-columns: 1fr; }
+  .comp-card-stats { grid-template-columns: repeat(2, 1fr); }
+  .comp-subject-card,
+  .comp-potential-card { padding: 1rem; }
+}
+
+/* ========================================
    Scrollbar
    ======================================== */
 ::-webkit-scrollbar { width: 8px; height: 8px; }

@@ -21,6 +21,7 @@
   var STORAGE_PROGRESS = 'rebuilt_arv_progress';
   var STORAGE_PRES = 'rebuilt_arv_pres_done';
   var STORAGE_PROP_ORDER = 'rebuilt_arv_prop_order';
+  var STORAGE_COMP_DONE = 'rebuilt_arv_comp_done';
 
   var PLACEHOLDER_IMG =
     'data:image/svg+xml,' +
@@ -182,6 +183,250 @@
   ];
 
   // ---------------------------------------------------------------------------
+  // Comp Analysis Data
+  // ---------------------------------------------------------------------------
+
+  var COMP_ISSUES = [
+    { id: 'wrong_type',      label: 'Wrong property type (e.g. ranch vs mobile home)' },
+    { id: 'size_diff',       label: 'Too different in size (>20% sq ft variance)' },
+    { id: 'too_far',         label: 'Too far away (>1/2 mile or different neighborhood)' },
+    { id: 'sale_too_old',    label: 'Sale too old (>4 months ago)' },
+    { id: 'diff_style',      label: 'Different style or construction' },
+    { id: 'active_listing',  label: 'Active listing, not a sold comp' },
+    { id: 'ext_obsolescence', label: 'External obsolescence (highway, commercial, etc.)' },
+    { id: 'lot_size_diff',   label: 'Significantly different lot size' },
+  ];
+
+  var COMP_PASS_THRESHOLD = 80;
+  var COMP_SCENARIOS_REQUIRED = 5;
+
+  var COMP_SCENARIOS = [
+    // Scenario 1: Brick Ranch — tests wrong type, old sale, active listing
+    {
+      subject: {
+        address: '412 Oak Ridge Dr, Memphis, TN 38109',
+        beds: 3, baths: 2, sqft: 1400, yearBuilt: 1985,
+        houseType: 'Brick Ranch', hasGarage: true, hasBasement: false, lotSqft: 8500,
+      },
+      comps: [
+        {
+          address: '438 Oak Ridge Dr, Memphis, TN',
+          beds: 3, baths: 2, sqft: 1350, yearBuilt: 1987,
+          houseType: 'Brick Ranch', hasGarage: true, hasBasement: false, lotSqft: 8200,
+          soldPrice: 185000, soldDate: '2025-12-15', distance: 0.2, issues: [],
+        },
+        {
+          address: '1901 Highway 51 S, Memphis, TN',
+          beds: 3, baths: 1, sqft: 1100, yearBuilt: 1972,
+          houseType: 'Mobile Home', hasGarage: false, hasBasement: false, lotSqft: 43560,
+          soldPrice: 68000, soldDate: '2025-11-20', distance: 0.4, issues: ['wrong_type', 'lot_size_diff'],
+        },
+        {
+          address: '505 Oak Ridge Dr, Memphis, TN',
+          beds: 3, baths: 2, sqft: 1500, yearBuilt: 1983,
+          houseType: 'Brick Ranch', hasGarage: true, hasBasement: false, lotSqft: 9000,
+          soldPrice: 192000, soldDate: '2025-04-10', distance: 0.3, issues: ['sale_too_old'],
+        },
+        {
+          address: '220 Maple Ln, Memphis, TN',
+          beds: 3, baths: 2, sqft: 1450, yearBuilt: 1990,
+          houseType: 'Brick Ranch', hasGarage: true, hasBasement: false, lotSqft: 8800,
+          soldPrice: 195000, status: 'Active', distance: 0.3, issues: ['active_listing'],
+        },
+        {
+          address: '425 Oak Ridge Dr, Memphis, TN',
+          beds: 3, baths: 2, sqft: 1380, yearBuilt: 1986,
+          houseType: 'Brick Ranch', hasGarage: true, hasBasement: false, lotSqft: 8400,
+          soldPrice: 182000, soldDate: '2025-10-28', distance: 0.1, issues: [],
+        },
+      ],
+    },
+    // Scenario 2: Townhouse — tests wrong type, size diff, ext obsolescence
+    {
+      subject: {
+        address: '88 Birch Creek Way, Charlotte, NC 28205',
+        beds: 2, baths: 2.5, sqft: 1200, yearBuilt: 2005,
+        houseType: 'Townhouse', hasGarage: false, hasBasement: false, lotSqft: 2200,
+      },
+      comps: [
+        {
+          address: '92 Birch Creek Way, Charlotte, NC',
+          beds: 2, baths: 2.5, sqft: 1200, yearBuilt: 2005,
+          houseType: 'Townhouse', hasGarage: false, hasBasement: false, lotSqft: 2200,
+          soldPrice: 245000, soldDate: '2025-11-05', distance: 0.05, issues: [],
+        },
+        {
+          address: '310 Independence Blvd, Charlotte, NC',
+          beds: 3, baths: 2, sqft: 1800, yearBuilt: 1998,
+          houseType: 'Detached House', hasGarage: true, hasBasement: false, lotSqft: 7500,
+          soldPrice: 310000, soldDate: '2025-10-22', distance: 0.4,
+          issues: ['wrong_type', 'size_diff', 'lot_size_diff'],
+        },
+        {
+          address: '15 Birch Creek Way, Charlotte, NC',
+          beds: 2, baths: 2, sqft: 1150, yearBuilt: 2006,
+          houseType: 'Townhouse', hasGarage: false, hasBasement: false, lotSqft: 2100,
+          soldPrice: 238000, soldDate: '2025-12-01', distance: 0.1, issues: [],
+        },
+        {
+          address: '402 Highway 74 Frontage, Charlotte, NC',
+          beds: 2, baths: 2.5, sqft: 1250, yearBuilt: 2004,
+          houseType: 'Townhouse', hasGarage: false, hasBasement: false, lotSqft: 2300,
+          soldPrice: 210000, soldDate: '2025-09-18', distance: 0.3,
+          issues: ['ext_obsolescence'],
+        },
+        {
+          address: '750 Park Rd, Charlotte, NC',
+          beds: 3, baths: 3, sqft: 2400, yearBuilt: 2010,
+          houseType: 'Townhouse', hasGarage: true, hasBasement: false, lotSqft: 3000,
+          soldPrice: 385000, soldDate: '2025-11-12', distance: 0.6,
+          issues: ['size_diff', 'too_far'],
+        },
+      ],
+    },
+    // Scenario 3: Colonial with basement — tests distance, lot size, style
+    {
+      subject: {
+        address: '1025 Elm St, Columbus, OH 43201',
+        beds: 4, baths: 2.5, sqft: 2200, yearBuilt: 1965,
+        houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 10000,
+      },
+      comps: [
+        {
+          address: '1031 Elm St, Columbus, OH',
+          beds: 4, baths: 2.5, sqft: 2100, yearBuilt: 1968,
+          houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 9800,
+          soldPrice: 285000, soldDate: '2025-10-30', distance: 0.05, issues: [],
+        },
+        {
+          address: '4500 Sawmill Rd, Columbus, OH',
+          beds: 4, baths: 2.5, sqft: 2300, yearBuilt: 1970,
+          houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 11000,
+          soldPrice: 310000, soldDate: '2025-11-15', distance: 3.2, issues: ['too_far'],
+        },
+        {
+          address: '1050 Elm St, Columbus, OH',
+          beds: 3, baths: 2, sqft: 1600, yearBuilt: 1975,
+          houseType: 'Split-Level', hasGarage: true, hasBasement: true, lotSqft: 9500,
+          soldPrice: 240000, soldDate: '2025-09-20', distance: 0.1,
+          issues: ['diff_style', 'size_diff'],
+        },
+        {
+          address: '980 Elm St, Columbus, OH',
+          beds: 4, baths: 2, sqft: 2150, yearBuilt: 1963,
+          houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 10200,
+          soldPrice: 278000, soldDate: '2025-12-02', distance: 0.2, issues: [],
+        },
+        {
+          address: '1100 Oak Ave, Columbus, OH',
+          beds: 4, baths: 3, sqft: 2250, yearBuilt: 1960,
+          houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 43560,
+          soldPrice: 320000, soldDate: '2025-10-10', distance: 0.3, issues: ['lot_size_diff'],
+        },
+        {
+          address: '1080 Elm St, Columbus, OH',
+          beds: 4, baths: 2.5, sqft: 2180, yearBuilt: 1966,
+          houseType: 'Colonial', hasGarage: true, hasBasement: true, lotSqft: 10500,
+          soldPrice: 290000, status: 'Active', distance: 0.15, issues: ['active_listing'],
+        },
+      ],
+    },
+    // Scenario 4: Multi-family duplex — tests wrong type against single-family
+    {
+      subject: {
+        address: '315 Vine St, Cincinnati, OH 45202',
+        beds: 4, baths: 2, sqft: 2000, yearBuilt: 1920,
+        houseType: 'Multi-Family Duplex', hasGarage: false, hasBasement: true, lotSqft: 4000,
+      },
+      comps: [
+        {
+          address: '321 Vine St, Cincinnati, OH',
+          beds: 4, baths: 2, sqft: 1900, yearBuilt: 1925,
+          houseType: 'Multi-Family Duplex', hasGarage: false, hasBasement: true, lotSqft: 3800,
+          soldPrice: 195000, soldDate: '2025-11-08', distance: 0.05, issues: [],
+        },
+        {
+          address: '400 Main St, Cincinnati, OH',
+          beds: 3, baths: 2, sqft: 1500, yearBuilt: 1940,
+          houseType: 'Single-Family', hasGarage: true, hasBasement: true, lotSqft: 6000,
+          soldPrice: 225000, soldDate: '2025-10-20', distance: 0.3,
+          issues: ['wrong_type', 'lot_size_diff'],
+        },
+        {
+          address: '330 Vine St, Cincinnati, OH',
+          beds: 6, baths: 3, sqft: 3200, yearBuilt: 1918,
+          houseType: 'Multi-Family Triplex', hasGarage: false, hasBasement: true, lotSqft: 4500,
+          soldPrice: 280000, soldDate: '2025-12-05', distance: 0.1,
+          issues: ['wrong_type', 'size_diff'],
+        },
+        {
+          address: '310 Vine St, Cincinnati, OH',
+          beds: 4, baths: 2, sqft: 2100, yearBuilt: 1922,
+          houseType: 'Multi-Family Duplex', hasGarage: false, hasBasement: true, lotSqft: 4200,
+          soldPrice: 205000, soldDate: '2025-10-15', distance: 0.05, issues: [],
+        },
+        {
+          address: '500 Race St, Cincinnati, OH',
+          beds: 4, baths: 2, sqft: 2050, yearBuilt: 1930,
+          houseType: 'Multi-Family Duplex', hasGarage: false, hasBasement: true, lotSqft: 3900,
+          soldPrice: 185000, soldDate: '2025-03-12', distance: 0.4,
+          issues: ['sale_too_old'],
+        },
+      ],
+    },
+    // Scenario 5: Mixed difficulty — multiple overlapping issues
+    {
+      subject: {
+        address: '742 Peachtree Ln, Atlanta, GA 30308',
+        beds: 3, baths: 2, sqft: 1600, yearBuilt: 1995,
+        houseType: 'Vinyl Ranch', hasGarage: true, hasBasement: false, lotSqft: 7200,
+      },
+      comps: [
+        {
+          address: '2100 Industrial Pkwy, Atlanta, GA',
+          beds: 3, baths: 1, sqft: 1100, yearBuilt: 1978,
+          houseType: 'Mobile Home', hasGarage: false, hasBasement: false, lotSqft: 21780,
+          soldPrice: 75000, soldDate: '2025-05-01', distance: 1.5,
+          issues: ['wrong_type', 'size_diff', 'too_far', 'sale_too_old', 'lot_size_diff'],
+        },
+        {
+          address: '750 Peachtree Ln, Atlanta, GA',
+          beds: 3, baths: 2, sqft: 1550, yearBuilt: 1997,
+          houseType: 'Vinyl Ranch', hasGarage: true, hasBasement: false, lotSqft: 7000,
+          soldPrice: 265000, soldDate: '2025-11-22', distance: 0.05, issues: [],
+        },
+        {
+          address: '800 Magnolia Dr, Atlanta, GA',
+          beds: 4, baths: 3, sqft: 2800, yearBuilt: 2015,
+          houseType: 'Brick Colonial', hasGarage: true, hasBasement: true, lotSqft: 12000,
+          soldPrice: 450000, soldDate: '2025-12-01', distance: 0.4,
+          issues: ['diff_style', 'size_diff', 'lot_size_diff'],
+        },
+        {
+          address: '738 Peachtree Ln, Atlanta, GA',
+          beds: 3, baths: 2, sqft: 1650, yearBuilt: 1993,
+          houseType: 'Vinyl Ranch', hasGarage: true, hasBasement: false, lotSqft: 7400,
+          soldPrice: 270000, soldDate: '2025-10-05', distance: 0.03, issues: [],
+        },
+        {
+          address: '900 Hwy 85 Frontage Rd, Atlanta, GA',
+          beds: 3, baths: 2, sqft: 1580, yearBuilt: 1992,
+          houseType: 'Vinyl Ranch', hasGarage: true, hasBasement: false, lotSqft: 7100,
+          soldPrice: 230000, soldDate: '2025-09-15', distance: 0.3,
+          issues: ['ext_obsolescence'],
+        },
+        {
+          address: '760 Peachtree Ln, Atlanta, GA',
+          beds: 3, baths: 2, sqft: 1620, yearBuilt: 1996,
+          houseType: 'Vinyl Ranch', hasGarage: true, hasBasement: false, lotSqft: 7300,
+          soldPrice: 275000, status: 'Active', distance: 0.1,
+          issues: ['active_listing'],
+        },
+      ],
+    },
+  ];
+
+  // ---------------------------------------------------------------------------
   // Quiz state
   // ---------------------------------------------------------------------------
 
@@ -192,6 +437,12 @@
   var moduleResults = [];
   var runningArvPctSum = 0;
   var runningRenoPctSum = 0;
+
+  // Comp analysis state
+  var compScenarioIndex = 0;
+  var compQuestionIndex = 0;
+  var compResults = [];
+  var compCurrentComps = [];
 
   // ---------------------------------------------------------------------------
   // Utility helpers
@@ -419,6 +670,14 @@
     try { localStorage.setItem(STORAGE_PROP_ORDER, JSON.stringify(order)); } catch (_) {}
   }
 
+  function isCompAnalysisDone() {
+    try { return localStorage.getItem(STORAGE_COMP_DONE) === 'true'; } catch (_) { return false; }
+  }
+
+  function setCompAnalysisDone() {
+    try { localStorage.setItem(STORAGE_COMP_DONE, 'true'); } catch (_) {}
+  }
+
   // ---------------------------------------------------------------------------
   // Header level badge
   // ---------------------------------------------------------------------------
@@ -550,6 +809,27 @@
       callback({ status: 'error', rows: [] });
     };
     document.head.appendChild(script);
+  }
+
+  function logCompToSheets(passed, avgScore) {
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+    var payload = {
+      email: getEmail() || '',
+      dateTime: new Date().toISOString(),
+      module: 'Intro: Comp Analysis',
+      result: passed ? 'Pass' : 'Fail',
+      avgArvPct: avgScore.toFixed(1),
+      avgRenoPct: '0',
+      grades: [],
+    };
+    try {
+      fetch(SHEETS_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(payload),
+      });
+    } catch (_) {}
   }
 
   // ---------------------------------------------------------------------------
@@ -719,7 +999,7 @@
         onClick: function () {
           if (isLast) {
             setPresentationDone();
-            renderDashboard();
+            if (isCompAnalysisDone()) { renderDashboard(); } else { renderCompIntro(); }
           } else {
             slideIdx++;
             renderSlide();
@@ -735,13 +1015,423 @@
     function onKey(e) {
       if (e.key === 'ArrowRight' || e.key === 'Enter') {
         if (slideIdx < SLIDES.length - 1) { slideIdx++; renderSlide(); }
-        else { setPresentationDone(); renderDashboard(); document.removeEventListener('keydown', onKey); }
+        else { setPresentationDone(); if (isCompAnalysisDone()) { renderDashboard(); } else { renderCompIntro(); } document.removeEventListener('keydown', onKey); }
       } else if (e.key === 'ArrowLeft' && slideIdx > 0) {
         slideIdx--; renderSlide();
       }
     }
     document.addEventListener('keydown', onKey);
     renderSlide();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Comp Analysis Intro
+  // ---------------------------------------------------------------------------
+
+  function renderCompIntro() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen comp-intro-screen' });
+
+    screen.appendChild(el('div', { className: 'comp-intro-icon' }, '\uD83D\uDD0D'));
+    screen.appendChild(el('h1', null, 'Comp Analysis Training'));
+    screen.appendChild(el('p', { className: 'comp-intro-desc' },
+      'Before you start estimating ARVs, you need to master comp selection. ' +
+      'You\u2019ll review subject properties and evaluate potential comparables using the 4-3-2-1 Rule.'
+    ));
+
+    var rules = el('div', { className: 'comp-rules-recap' });
+    rules.appendChild(el('h3', null, 'The 4-3-2-1 Rule'));
+    var grid = el('div', { className: 'comp-rules-grid' });
+    [
+      { big: '4', label: 'Months', desc: 'Sales from last 4 months only' },
+      { big: '3', label: 'Blocks', desc: 'Same subdivision or \u00BD-mile radius' },
+      { big: '20%', label: 'Variance', desc: 'Within 20% of subject sq ft' },
+      { big: '1', label: 'Style', desc: 'Match architectural style' },
+    ].forEach(function (r) {
+      grid.appendChild(el('div', { className: 'comp-rule-item' },
+        el('span', { className: 'comp-rule-big' }, r.big),
+        el('span', { className: 'comp-rule-label' }, r.label),
+        el('span', { className: 'comp-rule-desc' }, r.desc)
+      ));
+    });
+    rules.appendChild(grid);
+    screen.appendChild(rules);
+
+    screen.appendChild(el('p', { className: 'comp-intro-instruction' },
+      'For each potential comp, check all reasons it is NOT a good comparable. ' +
+      'If it IS a good comp, leave all boxes unchecked and click \u201CGood Comp.\u201D'
+    ));
+
+    screen.appendChild(el('button', {
+      className: 'btn-primary btn-large',
+      onClick: function () {
+        compScenarioIndex = 0;
+        compQuestionIndex = 0;
+        compResults = [];
+        compCurrentComps = [];
+        renderCompScenario();
+      }
+    }, 'Start Comp Analysis \u2192'));
+
+    if (isCompAnalysisDone()) {
+      screen.appendChild(el('button', {
+        className: 'btn-secondary',
+        style: { marginTop: '0.5rem' },
+        onClick: renderDashboard,
+      }, '\u2190 Back to Dashboard'));
+    }
+
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Comp Analysis: Card Builders
+  // ---------------------------------------------------------------------------
+
+  function buildSubjectCard(subject) {
+    var card = el('div', { className: 'comp-subject-card' });
+    card.appendChild(el('div', { className: 'comp-card-badge' }, 'SUBJECT PROPERTY'));
+    card.appendChild(el('h2', { className: 'comp-card-address' }, subject.address));
+    var stats = el('div', { className: 'property-stats' });
+    var lotDisplay = '\u2014';
+    if (subject.lotSqft) {
+      lotDisplay = subject.lotSqft >= 43560
+        ? (subject.lotSqft / 43560).toFixed(2) + ' ac'
+        : Math.round(subject.lotSqft).toLocaleString() + ' sqft';
+    }
+    [
+      ['Beds', subject.beds], ['Baths', subject.baths],
+      ['Sqft', subject.sqft ? subject.sqft.toLocaleString() : '\u2014'],
+      ['Year', subject.yearBuilt || '\u2014'], ['Type', subject.houseType],
+      ['Lot', lotDisplay],
+      ['Garage', subject.hasGarage ? 'Yes' : 'No'],
+      ['Basement', subject.hasBasement ? 'Yes' : 'No'],
+    ].forEach(function (pair) {
+      stats.appendChild(el('div', { className: 'stat-item' },
+        el('span', { className: 'stat-label' }, pair[0]),
+        el('span', { className: 'stat-value' }, String(pair[1]))
+      ));
+    });
+    card.appendChild(stats);
+    return card;
+  }
+
+  function buildCompCard(comp) {
+    var card = el('div', { className: 'comp-potential-card' });
+    card.appendChild(el('div', { className: 'comp-card-badge comp-badge-potential' }, 'POTENTIAL COMP'));
+    card.appendChild(el('h2', { className: 'comp-card-address' }, comp.address));
+    var stats = el('div', { className: 'property-stats' });
+    var lotDisplay = '\u2014';
+    if (comp.lotSqft) {
+      lotDisplay = comp.lotSqft >= 43560
+        ? (comp.lotSqft / 43560).toFixed(2) + ' ac'
+        : Math.round(comp.lotSqft).toLocaleString() + ' sqft';
+    }
+    [
+      ['Beds', comp.beds], ['Baths', comp.baths],
+      ['Sqft', comp.sqft ? comp.sqft.toLocaleString() : '\u2014'],
+      ['Year', comp.yearBuilt || '\u2014'], ['Type', comp.houseType],
+      ['Lot', lotDisplay],
+      ['Garage', comp.hasGarage ? 'Yes' : 'No'],
+      ['Basement', comp.hasBasement ? 'Yes' : 'No'],
+    ].forEach(function (pair) {
+      stats.appendChild(el('div', { className: 'stat-item' },
+        el('span', { className: 'stat-label' }, pair[0]),
+        el('span', { className: 'stat-value' }, String(pair[1]))
+      ));
+    });
+    card.appendChild(stats);
+
+    var saleInfo = el('div', { className: 'comp-sale-info' });
+    if (comp.status === 'Active') {
+      saleInfo.appendChild(el('span', { className: 'comp-active-badge' }, 'ACTIVE LISTING'));
+      saleInfo.appendChild(el('span', null, 'List: ' + formatDollars(comp.soldPrice)));
+    } else if (comp.soldDate) {
+      saleInfo.appendChild(el('span', null, 'Sold: ' + comp.soldDate + ' for ' + formatDollars(comp.soldPrice)));
+    }
+    saleInfo.appendChild(el('span', null, comp.distance + ' mi away'));
+    card.appendChild(saleInfo);
+    return card;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Comp Analysis Scenario (one comp at a time)
+  // ---------------------------------------------------------------------------
+
+  function renderCompScenario() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var scenario = COMP_SCENARIOS[compScenarioIndex];
+    var comp = scenario.comps[compQuestionIndex];
+    var screen = el('div', { className: 'screen comp-scenario-screen' });
+
+    screen.appendChild(el('div', { className: 'score-tracker' },
+      el('span', null, 'Scenario ' + (compScenarioIndex + 1) + '/' + COMP_SCENARIOS_REQUIRED),
+      el('span', null, 'Comp ' + (compQuestionIndex + 1) + '/' + scenario.comps.length)
+    ));
+
+    var pct = (compQuestionIndex / scenario.comps.length) * 100;
+    var bar = el('div', { className: 'progress-bar' });
+    bar.appendChild(el('div', { className: 'progress-fill', style: { width: pct + '%' } }));
+    screen.appendChild(bar);
+
+    screen.appendChild(buildSubjectCard(scenario.subject));
+    screen.appendChild(el('div', { className: 'comp-vs-divider' }, el('span', null, 'vs')));
+    screen.appendChild(buildCompCard(comp));
+
+    var form = el('div', { className: 'comp-issues-form' });
+    form.appendChild(el('h3', null, 'What\u2019s wrong with this comp?'));
+    form.appendChild(el('p', { className: 'comp-issues-hint' },
+      'Check all issues that apply, or mark as Good Comp if none.'));
+
+    var selectedIssues = {};
+    var goodCompSelected = false;
+    var goodCompBtn = null;
+    var checkboxes = [];
+
+    COMP_ISSUES.forEach(function (issue) {
+      var checkbox = el('input', { type: 'checkbox', id: 'issue-' + issue.id });
+      var lbl = el('label', { className: 'comp-checkbox-label', for: 'issue-' + issue.id },
+        checkbox,
+        el('span', { className: 'comp-checkbox-text' }, issue.label)
+      );
+      checkbox.addEventListener('change', function () {
+        selectedIssues[issue.id] = checkbox.checked;
+        if (checkbox.checked && goodCompSelected) {
+          goodCompSelected = false;
+          goodCompBtn.classList.remove('comp-good-selected');
+        }
+      });
+      checkboxes.push(checkbox);
+      form.appendChild(lbl);
+    });
+
+    goodCompBtn = el('button', {
+      type: 'button',
+      className: 'comp-good-btn',
+      onClick: function () {
+        goodCompSelected = !goodCompSelected;
+        goodCompBtn.classList.toggle('comp-good-selected', goodCompSelected);
+        if (goodCompSelected) {
+          checkboxes.forEach(function (cb) { cb.checked = false; });
+          selectedIssues = {};
+        }
+      },
+    }, '\u2705 Good Comp \u2014 No Issues');
+    form.appendChild(goodCompBtn);
+
+    var errorMsg = el('p', { className: 'comp-error', style: { display: 'none' } },
+      'Please select at least one issue or mark as Good Comp.');
+    form.appendChild(errorMsg);
+
+    var isLast = compQuestionIndex >= scenario.comps.length - 1;
+    form.appendChild(el('button', {
+      className: 'btn-primary',
+      onClick: handleCompSubmit,
+    }, isLast ? 'See Results' : 'Next Comp \u2192'));
+
+    screen.appendChild(form);
+    app.appendChild(screen);
+
+    function handleCompSubmit() {
+      var checkedIds = Object.keys(selectedIssues).filter(function (k) { return selectedIssues[k]; });
+      if (checkedIds.length === 0 && !goodCompSelected) {
+        errorMsg.style.display = 'block';
+        return;
+      }
+
+      var userIssues = goodCompSelected ? [] : checkedIds;
+      var correctIssues = comp.issues;
+      var allIssueIds = COMP_ISSUES.map(function (i) { return i.id; });
+      var correct = 0;
+      var total = allIssueIds.length + 1;
+
+      var isGoodComp = correctIssues.length === 0;
+      if (isGoodComp === goodCompSelected) correct++;
+
+      allIssueIds.forEach(function (id) {
+        var userChecked = userIssues.indexOf(id) !== -1;
+        var shouldBeChecked = correctIssues.indexOf(id) !== -1;
+        if (userChecked === shouldBeChecked) correct++;
+      });
+
+      compCurrentComps.push({
+        comp: comp,
+        userIssues: userIssues,
+        goodCompSelected: goodCompSelected,
+        correct: correct,
+        total: total,
+        score: (correct / total) * 100,
+      });
+
+      if (isLast) {
+        renderCompScenarioResults();
+      } else {
+        compQuestionIndex++;
+        renderCompScenario();
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Comp Scenario Results
+  // ---------------------------------------------------------------------------
+
+  function renderCompScenarioResults() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen comp-results-screen' });
+
+    var totalCorrect = 0;
+    var totalPossible = 0;
+    compCurrentComps.forEach(function (r) {
+      totalCorrect += r.correct;
+      totalPossible += r.total;
+    });
+    var scenarioScore = (totalCorrect / totalPossible) * 100;
+    var passed = scenarioScore >= COMP_PASS_THRESHOLD;
+
+    screen.appendChild(el('h1', null, 'Scenario ' + (compScenarioIndex + 1) + ' Results'));
+    screen.appendChild(el('div', { className: 'module-badge ' + (passed ? 'badge-pass' : 'badge-fail') },
+      passed ? '\u2705' : '\u274C'
+    ));
+    screen.appendChild(el('h2', { className: 'module-verdict ' + (passed ? 'text-good' : 'text-bad') },
+      scenarioScore.toFixed(0) + '% Correct' + (passed ? ' \u2014 Passed!' : ' \u2014 Needs Work')
+    ));
+
+    screen.appendChild(el('h3', { style: { textAlign: 'left', margin: '1.5rem 0 .75rem' } }, 'Comp Breakdown'));
+    compCurrentComps.forEach(function (r) {
+      var compDiv = el('div', { className: 'comp-result-item ' + (r.score >= 80 ? 'comp-result-good' : 'comp-result-bad') });
+      compDiv.appendChild(el('div', { className: 'comp-result-header' },
+        el('strong', null, r.comp.address),
+        el('span', { className: r.score >= 80 ? 'text-good' : 'text-bad' }, r.score.toFixed(0) + '%')
+      ));
+
+      var isGoodComp = r.comp.issues.length === 0;
+      if (isGoodComp) {
+        compDiv.appendChild(el('p', { className: 'comp-result-answer ' + (r.goodCompSelected ? 'text-good' : 'text-bad') },
+          r.goodCompSelected ? '\u2713 Correctly identified as good comp' : '\u2717 This was actually a good comp'
+        ));
+      } else {
+        if (r.goodCompSelected) {
+          compDiv.appendChild(el('p', { className: 'comp-result-answer text-bad' },
+            '\u2717 You marked this as a good comp, but it has issues:'
+          ));
+        }
+        var issueList = el('div', { className: 'comp-result-issues' });
+        COMP_ISSUES.forEach(function (issue) {
+          var shouldCheck = r.comp.issues.indexOf(issue.id) !== -1;
+          var didCheck = r.userIssues.indexOf(issue.id) !== -1;
+          if (shouldCheck || didCheck) {
+            var icon, explain;
+            if (shouldCheck && didCheck) { icon = '\u2705'; explain = 'Correct'; }
+            else if (!shouldCheck && didCheck) { icon = '\u274C'; explain = 'Not actually an issue'; }
+            else { icon = '\u26A0\uFE0F'; explain = 'Missed this issue'; }
+            issueList.appendChild(el('div', { className: 'comp-result-issue' },
+              el('span', null, icon + ' ' + issue.label),
+              el('span', { className: 'comp-result-explain' }, explain)
+            ));
+          }
+        });
+        compDiv.appendChild(issueList);
+      }
+      screen.appendChild(compDiv);
+    });
+
+    compResults.push({
+      scenarioIndex: compScenarioIndex,
+      score: scenarioScore,
+      passed: passed,
+    });
+
+    var allDone = compScenarioIndex + 1 >= COMP_SCENARIOS_REQUIRED;
+    var btnRow = el('div', { className: 'btn-row' });
+    if (allDone) {
+      btnRow.appendChild(el('button', {
+        className: 'btn-primary',
+        onClick: renderCompSummary,
+      }, 'View Final Results'));
+    } else {
+      btnRow.appendChild(el('button', {
+        className: 'btn-primary',
+        onClick: function () {
+          compScenarioIndex++;
+          compQuestionIndex = 0;
+          compCurrentComps = [];
+          renderCompScenario();
+        },
+      }, 'Next Scenario \u2192'));
+    }
+    screen.appendChild(btnRow);
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Comp Analysis Summary (pass/fail)
+  // ---------------------------------------------------------------------------
+
+  function renderCompSummary() {
+    var app = clearApp();
+    updateHeaderLevel();
+    var screen = el('div', { className: 'screen comp-summary-screen' });
+
+    var totalScore = 0;
+    compResults.forEach(function (r) { totalScore += r.score; });
+    var avgScore = totalScore / compResults.length;
+    var overallPassed = avgScore >= COMP_PASS_THRESHOLD;
+
+    screen.appendChild(el('h1', null, 'Comp Analysis Complete'));
+    screen.appendChild(el('div', { className: 'module-badge ' + (overallPassed ? 'badge-pass' : 'badge-fail') },
+      overallPassed ? '\uD83C\uDF93' : '\uD83D\uDCDA'
+    ));
+    screen.appendChild(el('h2', { className: 'module-verdict ' + (overallPassed ? 'text-good' : 'text-bad') },
+      overallPassed ? 'You Passed! ARV Modules Unlocked' : 'Not Quite \u2014 Review the 4-3-2-1 Rule'
+    ));
+    screen.appendChild(el('p', { style: { textAlign: 'center', color: '#64748B', marginBottom: '1rem' } },
+      'Average Score: ' + avgScore.toFixed(0) + '% (Need ' + COMP_PASS_THRESHOLD + '% to pass)'
+    ));
+
+    // Breakdown table using existing classes
+    var table = el('div', { className: 'history-table' });
+    var header = el('div', { className: 'history-row history-header', style: { gridTemplateColumns: '1fr 1fr 1fr' } });
+    ['Scenario', 'Score', 'Result'].forEach(function (h) {
+      header.appendChild(el('div', { className: 'history-cell' }, h));
+    });
+    table.appendChild(header);
+    compResults.forEach(function (r, i) {
+      var row = el('div', { className: 'history-row', style: { gridTemplateColumns: '1fr 1fr 1fr' } });
+      row.appendChild(el('div', { className: 'history-cell' }, 'Scenario ' + (i + 1)));
+      row.appendChild(el('div', { className: 'history-cell ' + (r.passed ? 'text-good' : 'text-bad') }, r.score.toFixed(0) + '%'));
+      row.appendChild(el('div', { className: 'history-cell ' + (r.passed ? 'text-good' : 'text-bad') },
+        (r.passed ? '\u2713 Pass' : '\u2717 Fail')));
+      table.appendChild(row);
+    });
+    screen.appendChild(table);
+
+    logCompToSheets(overallPassed, avgScore);
+
+    if (overallPassed) {
+      setCompAnalysisDone();
+      screen.appendChild(el('button', {
+        className: 'btn-primary btn-large',
+        style: { marginTop: '1.5rem' },
+        onClick: renderDashboard,
+      }, 'Continue to ARV Modules \u2192'));
+    } else {
+      var btnRow = el('div', { className: 'btn-row' });
+      btnRow.appendChild(el('button', {
+        className: 'btn-primary',
+        onClick: renderCompIntro,
+      }, '\uD83D\uDD01 Try Again'));
+      btnRow.appendChild(el('button', {
+        className: 'btn-secondary',
+        onClick: renderPresentation,
+      }, '\uD83C\uDF93 Review Training Slides'));
+      screen.appendChild(btnRow);
+    }
+
+    app.appendChild(screen);
   }
 
   // ---------------------------------------------------------------------------
@@ -786,6 +1476,19 @@
 
     // Module grid
     var grid = el('div', { className: 'dash-modules' });
+
+    // Intro: Comp Analysis card (always complete at this point)
+    var compCard = el('div', {
+      className: 'dash-module-card mod-complete comp-intro-card',
+    });
+    compCard.style.cursor = 'pointer';
+    compCard.addEventListener('click', function () { renderCompIntro(); });
+    compCard.appendChild(el('div', { className: 'mod-icon' }, '\uD83D\uDD0D'));
+    compCard.appendChild(el('div', { className: 'mod-number' }, 'Intro'));
+    compCard.appendChild(el('div', { className: 'mod-questions' }, 'Comp Analysis'));
+    compCard.appendChild(el('div', { className: 'mod-status mod-status-pass' }, '\u2713 Passed'));
+    grid.appendChild(compCard);
+
     for (var m = 0; m < MODULES_COUNT; m++) {
       (function (moduleIdx) {
         var isCompleted = completed.indexOf(moduleIdx) !== -1;
@@ -1486,6 +2189,7 @@
         progress.completedModules = [];
         saveProgress(progress);
         try { localStorage.removeItem(STORAGE_PROP_ORDER); } catch (_) {}
+        try { localStorage.removeItem(STORAGE_COMP_DONE); } catch (_) {}
         renderDashboard();
       }
     }, '\uD83D\uDD04 Reset & Start Over'));
@@ -1587,7 +2291,7 @@
     var screen = el('div', { className: 'screen history-screen' });
 
     screen.appendChild(el('h1', null, '\uD83C\uDFC6 Leaderboard'));
-    screen.appendChild(el('p', { className: 'history-subtitle' }, 'Best accuracy with at least 25 properties (5 modules). Sorted by average accuracy.'));
+    screen.appendChild(el('p', { className: 'history-subtitle' }, 'Best accuracy with at least 5 properties (1 module). Sorted by average accuracy.'));
 
     var tableContainer = el('div', { className: 'history-table-container' });
     tableContainer.appendChild(el('div', { className: 'loading-spinner' }));
@@ -1640,7 +2344,7 @@
       var leaders = [];
       for (var email in userMap) {
         var u = userMap[email];
-        if (u.properties >= 25) {
+        if (u.properties >= 5) {
           u.avgArvPct = u.totalArvPct / u.attempts;
           u.avgRenoPct = u.totalRenoPct / u.attempts;
           u.overallPct = (u.avgArvPct + u.avgRenoPct) / 2;
@@ -1655,7 +2359,7 @@
       if (leaders.length === 0) {
         tableContainer.appendChild(el('div', { className: 'history-empty' },
           el('p', null, '\uD83C\uDFC6 No qualifying entries yet.'),
-          el('p', { className: 'history-empty-sub' }, 'Need at least 25 properties (5 module attempts) to qualify.')
+          el('p', { className: 'history-empty-sub' }, 'Need at least 5 properties (1 module attempt) to qualify.')
         ));
         return;
       }
@@ -1699,6 +2403,8 @@
       renderSignIn();
     } else if (!isPresentationDone()) {
       renderPresentation();
+    } else if (!isCompAnalysisDone()) {
+      renderCompIntro();
     } else {
       // Pre-load properties
       loadProperties().then(function () {
