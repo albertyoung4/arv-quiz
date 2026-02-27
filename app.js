@@ -88,7 +88,7 @@
   // ---------------------------------------------------------------------------
 
   var NAV_CONFIG = [
-    { id: 'tech-training', label: 'Tech Training', icon: '\uD83D\uDCBB',
+    { id: 'tech-training', label: 'Tech Training', icon: '\uD83D\uDCBB', disabled: true,
       items: [
         { id: 'hubspot',     label: 'Hubspot',     handler: null },
         { id: 'apv2',        label: 'APv2',         handler: null },
@@ -96,7 +96,7 @@
         { id: 'housecanary', label: 'HouseCanary',  handler: null },
       ]
     },
-    { id: 'sales-training', label: 'Sales Training', icon: '\uD83D\uDCBC',
+    { id: 'sales-training', label: 'Sales Training', icon: '\uD83D\uDCBC', disabled: true,
       groups: [
         { label: 'Basic', items: [
           { id: 'sales-level1', label: 'The Foundation', handler: 'bootSalesLevel1' },
@@ -116,7 +116,7 @@
         { id: 'investment-math', label: 'Investment Math',  handler: null },
       ]
     },
-    { id: 'materials', label: 'Materials', icon: '\uD83D\uDCDA',
+    { id: 'materials', label: 'Materials', icon: '\uD83D\uDCDA', disabled: true,
       items: [
         { id: 'materials-library', label: 'Video Library', handler: 'renderMaterials' },
       ]
@@ -1059,6 +1059,7 @@
     if (mobilePanel) mobilePanel.innerHTML = '';
 
     NAV_CONFIG.forEach(function (section) {
+      if (section.disabled) return;
       // --- Desktop dropdown ---
       var dropdownWrapper = el('div', { className: 'nav-dropdown' });
       var triggerText = section.icon + ' ' + section.label;
@@ -1181,6 +1182,7 @@
 
     var grid = el('div', { className: 'landing-grid' });
     NAV_CONFIG.forEach(function (section) {
+      if (section.disabled) return;
       var allItems = [];
       if (section.items) allItems = section.items;
       if (section.groups) {
