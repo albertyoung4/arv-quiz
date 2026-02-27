@@ -12,6 +12,31 @@
 
   var DATA_URL = 'properties.json';
   var SHEETS_URL = 'https://script.google.com/macros/s/AKfycbxaB0AOvzkIHhqvJK226aFoZsgdCbF4UWDRmBTw2jdtvBoaNi8pewsSCo_xiBfkuzHQ/exec';
+
+  // Post JSON to Apps Script via hidden form + iframe (avoids 302 redirect POST→GET issue with fetch no-cors)
+  function postToAppsScript(payload) {
+    if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
+    try {
+      var iframeName = '_logframe' + Date.now();
+      var iframe = document.createElement('iframe');
+      iframe.name = iframeName;
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = SHEETS_URL;
+      form.target = iframeName;
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = JSON.stringify(payload);
+      form.appendChild(input);
+      document.body.appendChild(form);
+      form.submit();
+      setTimeout(function () { form.remove(); iframe.remove(); }, 15000);
+    } catch (_) { /* silent fail */ }
+  }
+
   var MODULES_COUNT = 10;
   var QUESTIONS_PER_MODULE = 5;
   var ARV_PASS_THRESHOLD = 10;   // within 10%
@@ -1724,11 +1749,7 @@
     var email = getEmail() || '';
     var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
     try {
-      fetch(SHEETS_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ action: 'slackSalesDiploma', name: name, email: email }),
-      });
+      postToAppsScript({ action: 'slackSalesDiploma', name: name, email: email });
       localStorage.setItem(STORAGE_SALES_SLACK_POSTED, 'true');
     } catch (_) {}
   }
@@ -1736,17 +1757,13 @@
   function logSalesToSheets(levelId, levelTitle, passed, score) {
     if (!SHEETS_URL || SHEETS_URL === 'DEPLOY_URL_PLACEHOLDER') return;
     try {
-      fetch(SHEETS_URL, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: 'salesTraining',
-          email: getEmail() || '',
-          dateTime: new Date().toISOString(),
-          level: levelTitle,
-          result: passed ? 'Pass' : 'Fail',
-          score: score + '/10',
-        }),
+      postToAppsScript({
+        action: 'salesTraining',
+        email: getEmail() || '',
+        dateTime: new Date().toISOString(),
+        level: levelTitle,
+        result: passed ? 'Pass' : 'Fail',
+        score: score + '/10',
       });
     } catch (_) {}
   }
@@ -1979,14 +1996,7 @@
       avgRenoPct: avgRenoPct.toFixed(1),
       grades: grades,
     };
-    try {
-      fetch(SHEETS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload),
-      });
-    } catch (_) { /* silent fail */ }
+    postToAppsScript(payload);
   }
 
   function fetchHistory(callback) {
@@ -2024,14 +2034,7 @@
       avgRenoPct: '0',
       grades: [],
     };
-    try {
-      fetch(SHEETS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify(payload),
-      });
-    } catch (_) {}
+    postToAppsScript(payload);
   }
 
   // Post diploma completion to Slack via Apps Script
@@ -2046,16 +2049,7 @@
     var name = email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
 
     try {
-      fetch(SHEETS_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          action: 'slackDiploma',
-          name: name,
-          email: email,
-        }),
-      });
+      postToAppsScript({ action: 'slackDiploma', name: name, email: email });
       localStorage.setItem(STORAGE_SLACK_POSTED, 'true');
     } catch (_) { /* silent fail */ }
   }
