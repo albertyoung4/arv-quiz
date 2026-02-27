@@ -1267,10 +1267,11 @@
     if (isAdmin()) {
       var correctIssueIds = comp.issues;
       var isGood = correctIssueIds.length === 0;
-      form.appendChild(el('div', { className: 'admin-answer-banner' },
+      var adminBanner = el('div', { className: 'admin-answer-banner' },
         el('span', { className: 'admin-answer-icon' }, '\uD83D\uDD11'),
-        el('span', null, 'Admin View \u2014 Correct answer shown below')
-      ));
+        el('span', null, 'Admin View \u2014 Correct answer highlighted')
+      );
+      form.insertBefore(adminBanner, checkboxes[0].parentNode);
       COMP_ISSUES.forEach(function (issue, idx) {
         var label = checkboxes[idx].parentNode;
         if (correctIssueIds.indexOf(issue.id) !== -1) {
