@@ -1136,6 +1136,21 @@
       }
     });
 
+    // History & Leaderboard direct nav buttons
+    if (getEmail()) {
+      var histBtn = el('button', {
+        className: 'nav-trigger' + (activeSection === 'history' ? ' nav-trigger-active' : ''),
+        onClick: function () { closeAllDropdowns(); renderHistory(); }
+      }, '\uD83D\uDCCA History');
+      nav.appendChild(histBtn);
+
+      var lbBtn = el('button', {
+        className: 'nav-trigger' + (activeSection === 'leaderboard' ? ' nav-trigger-active' : ''),
+        onClick: function () { closeAllDropdowns(); renderLeaderboard(); }
+      }, '\uD83C\uDFC6 Leaders');
+      nav.appendChild(lbBtn);
+    }
+
     // Wire hamburger
     var hamburgerBtn = document.getElementById('hamburger-btn');
     if (hamburgerBtn) {
@@ -1216,21 +1231,6 @@
     });
 
     screen.appendChild(grid);
-
-    // History & Leaderboard quick-access buttons
-    if (getEmail()) {
-      var quickLinks = el('div', { className: 'dash-actions', style: { marginTop: '2rem' } });
-      quickLinks.appendChild(el('button', {
-        className: 'btn-secondary btn-small',
-        onClick: function () { renderHistory(); }
-      }, '\uD83D\uDCCA History'));
-      quickLinks.appendChild(el('button', {
-        className: 'btn-secondary btn-small',
-        onClick: function () { renderLeaderboard(); }
-      }, '\uD83C\uDFC6 Leaderboard'));
-      screen.appendChild(quickLinks);
-    }
-
     app.appendChild(screen);
   }
 
@@ -3467,6 +3467,8 @@
   // ---------------------------------------------------------------------------
 
   function renderHistory() {
+    activeSection = 'history';
+    renderNav();
     var app = clearApp();
 
     var screen = el('div', { className: 'screen history-screen' });
@@ -3550,6 +3552,8 @@
   // ---------------------------------------------------------------------------
 
   function renderLeaderboard() {
+    activeSection = 'leaderboard';
+    renderNav();
     var app = clearApp();
 
     var screen = el('div', { className: 'screen history-screen' });
