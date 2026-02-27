@@ -99,15 +99,13 @@
     { id: 'sales-training', label: 'Sales Training', icon: '\uD83D\uDCBC',
       groups: [
         { label: 'Basic', items: [
-          { id: 'sales-intro',     label: 'Intro',     handler: null },
-          { id: 'sales-followup',  label: 'Follow Up', handler: null },
+          { id: 'sales-level1', label: 'The Foundation', handler: 'bootSalesLevel1' },
         ]},
         { label: 'Intermediate', items: [
-          { id: 'sales-access',     label: 'Access',     handler: null },
-          { id: 'sales-motivation', label: 'Motivation', handler: null },
+          { id: 'sales-level2', label: 'Art of the Offer', handler: 'bootSalesLevel2' },
         ]},
         { label: 'Advanced', items: [
-          { id: 'sales-price-anchoring', label: 'Price Anchoring', handler: null },
+          { id: 'sales-level3', label: 'The Closer', handler: 'bootSalesLevel3' },
         ]},
       ]
     },
@@ -121,6 +119,156 @@
   ];
 
   var activeSection = null;
+
+  // ---------------------------------------------------------------------------
+  // Sales Course Config
+  // ---------------------------------------------------------------------------
+
+  var STORAGE_SALES = 'rebuilt_sales_progress';
+
+  var SALES_COURSE = [
+    // ---- LEVEL 1: THE FOUNDATION (Basic) ----
+    {
+      id: 'sales-level1',
+      title: 'Level 1: The Foundation',
+      subtitle: 'Master the fundamentals of property acquisition',
+      icon: '\uD83C\uDFD7\uFE0F',
+      modules: [
+        {
+          id: '4-pillars',
+          title: '4 Pillars Mastery',
+          desc: 'Property lookup, prospecting scripts, and the four pillars of acquisition: Condition, Location, Comps, and Motivation.',
+          videos: [
+            { fileId: '1i2gKYQSB32mwG3qGxTHMysyUQ0wyhoLB', title: 'Property Lookup, Process & Scripts (Part 1)' },
+            { fileId: '1NENvaDHkXZwXeI8OavE7bueHeDtXSH4z', title: 'Property Lookup, Process & Scripts (Part 2)' },
+          ]
+        },
+        {
+          id: 'setting-stage',
+          title: 'Setting the Stage Protocol',
+          desc: 'Setting up your acquisition dashboard, understanding ready-to-sell time, and protecting your leads.',
+          videos: [
+            { fileId: '1Eqk7RFjt4wYMtj5gGt4XRzeifon7dCyv', title: 'Acq Assoc Dash, Ready-To-Sell Time & Lead Protection' },
+          ]
+        },
+        {
+          id: 'condition-discovery',
+          title: 'Condition Discovery',
+          desc: 'HubSpot appointment scheduling, prospect calling techniques, and discovering property condition through conversation.',
+          videos: [
+            { fileId: '1lH3NJtw3xRA9S3ZZWEiQRptpG7qY8eLz', title: 'HS Training + Appointment Scheduled' },
+            { fileId: '1vVqWTzxVlsDShRA92Gq1Vz82rOpRNeQe', title: 'Prospect Calling Debrief' },
+          ]
+        }
+      ],
+      quiz: [
+        { q: 'What are the "4 Pillars" of property acquisition?', choices: ['Price, Location, Size, Age', 'Condition, Location, Comps, Motivation', 'ARV, Reno, Profit, Timeline', 'Bedrooms, Bathrooms, Sqft, Lot Size'], answer: 1 },
+        { q: 'What does "ready-to-sell time" measure?', choices: ['How long a property has been listed on MLS', 'The time between a lead entering the system and being seller-ready', 'How quickly you can close a deal', 'The average days on market in an area'], answer: 1 },
+        { q: 'When looking up a property, what tool is primarily used for prospect research?', choices: ['Zillow', 'APv2 (Property Lookup)', 'Google Maps', 'Realtor.com'], answer: 1 },
+        { q: 'What is the purpose of "lead protection" in the acquisition process?', choices: ['Hiding lead data from competitors', 'Ensuring your leads are not reassigned and your pipeline stays intact', 'Encrypting seller information', 'Blocking other agents from calling your leads'], answer: 1 },
+        { q: 'During condition discovery, what is the FIRST thing you should establish with a seller?', choices: ['The asking price', 'Their timeline and motivation for selling', 'The property square footage', 'Whether they have a mortgage'], answer: 1 },
+        { q: 'What is the primary goal of the initial prospect call?', choices: ['To make an offer immediately', 'To schedule an appointment and gather basic property/motivation info', 'To negotiate the lowest price', 'To get the seller to sign a contract'], answer: 1 },
+        { q: 'Which of these is NOT one of the 4 Pillars?', choices: ['Condition', 'Location', 'Profit Margin', 'Motivation'], answer: 2 },
+        { q: 'In the prospecting script, how should you introduce yourself to a seller?', choices: ['As a real estate agent', 'As a representative from the firm looking to buy properties in their area', 'As a home inspector', 'As a mortgage broker'], answer: 1 },
+        { q: 'What does the HubSpot "appointment scheduled" status indicate?', choices: ['The seller has accepted an offer', 'A meeting has been set to discuss the property further', 'The property inspection is scheduled', 'The closing date is set'], answer: 1 },
+        { q: 'Why is documenting property condition important during discovery?', choices: ['It helps determine renovation cost which affects your offer price', 'It is required by law', 'It replaces the need for an inspection', 'It is only needed for FHA loans'], answer: 0 },
+      ]
+    },
+    // ---- LEVEL 2: THE ART OF THE OFFER (Intermediate) ----
+    {
+      id: 'sales-level2',
+      title: 'Level 2: The Art of the Offer',
+      subtitle: 'Master pricing psychology and negotiation tactics',
+      icon: '\uD83C\uDFAF',
+      modules: [
+        {
+          id: '60-second-silence',
+          title: 'The 60-Second Silence',
+          desc: 'Anchoring strategy, using 65-70% of MAO to set expectations, and the power of silence after presenting a number.',
+          videos: [
+            { fileId: '1swinFDQiiA6n7WTQsTdQ1daJcjRNQvAU', title: 'Deep Dive: Negotiation' },
+          ]
+        },
+        {
+          id: 'odd-number-pricing',
+          title: 'Odd Number Pricing',
+          desc: 'Understanding the comp plan, snap comp quizzes, and using precise odd numbers to convey research-backed offers.',
+          videos: [
+            { fileId: '1xu-o6sH1LjlB4hiqCHAXcUt_aebHFXaj', title: 'Comp Plan Overview' },
+            { fileId: '18RZ-u3iScQcdkaaKjtOoVskiNiv9aj8Y', title: 'Snap Comp Quiz' },
+          ]
+        },
+        {
+          id: 'conditional-flexibility',
+          title: 'Conditional Flexibility',
+          desc: 'The give-to-get approach: using repair estimates, timelines, and seller concessions as negotiation levers.',
+          videos: [
+            { fileId: '13wls_1lu9ZgTwv7jKaMPcPzc0IZGdJH1', title: 'Comp Practice & Q&A' },
+          ]
+        }
+      ],
+      quiz: [
+        { q: 'What is the "60-Second Silence" technique?', choices: ['Waiting 60 seconds before answering the phone', 'Staying silent after presenting your offer to let the seller process and respond first', 'A meditation exercise before calls', 'Pausing for 60 seconds during property inspection'], answer: 1 },
+        { q: 'When anchoring a seller, what percentage of MAO should you use as your opening question?', choices: ['90-95%', '80-85%', '65-70%', '50-55%'], answer: 2 },
+        { q: 'Why use odd numbers (e.g., $147,300) instead of round numbers in an offer?', choices: ['It is required by the firm', 'Odd numbers signal thorough research and analysis, making the offer feel precise', 'Round numbers are considered bad luck', 'It confuses the seller into accepting'], answer: 1 },
+        { q: 'What is the "give-to-get" strategy in conditional flexibility?', choices: ['Giving the seller a gift card to get the deal', 'Offering concessions on timeline or terms in exchange for a lower price', 'Giving the property back to get a refund', 'Lowering your commission to get the listing'], answer: 1 },
+        { q: 'In the anchoring strategy, who should "bad news" about property value come from?', choices: ['The sales representative directly', 'The firm / underwriting department', 'The seller\'s neighbors', 'A third-party appraiser'], answer: 1 },
+        { q: 'What is the purpose of the snap comp quiz?', choices: ['To test your typing speed', 'To rapidly assess comparable property values and sharpen pricing instincts', 'To memorize property addresses', 'To practice using calculators'], answer: 1 },
+        { q: 'When a seller says your offer is too low, you should:', choices: ['Immediately raise your offer', 'Express empathy, remind them you are advocating for them, and explain the firm controls the funds', 'Hang up the phone', 'Tell them to list with an agent'], answer: 1 },
+        { q: 'What does MAO stand for?', choices: ['Market Average Offer', 'Maximum Allowable Offer', 'Minimum Acquisition Objective', 'Multiple Asset Optimization'], answer: 1 },
+        { q: 'When should you send a PandaDoc agreement to a seller?', choices: ['Only after they verbally accept', 'Every day you interact with a seller, regardless of where you are in negotiation', 'Only on weekends', 'After the inspection is complete'], answer: 1 },
+        { q: 'How do repair estimates help in negotiation?', choices: ['They are irrelevant to price', 'Positives argue for higher offers from the firm; negatives are attributed to the firm to manage seller expectations', 'They only matter for insurance purposes', 'They replace the need for an appraisal'], answer: 1 },
+      ]
+    },
+    // ---- LEVEL 3: THE CLOSER (Advanced) ----
+    {
+      id: 'sales-level3',
+      title: 'Level 3: The Closer',
+      subtitle: 'Master objection handling, value reframing, and retrade setup',
+      icon: '\uD83D\uDC51',
+      modules: [
+        {
+          id: '7-step-objection',
+          title: '7-Step Objection Sequence',
+          desc: 'Role play practice for handling the most common seller objections with a structured 7-step sequence.',
+          videos: [
+            { fileId: '1NteJkJwLh0w5eE34JbhCyZFXzIexg5Tz', title: 'Role Plays: Sales Script (Session 1)' },
+            { fileId: '1nyx2v3R4wzkFTwWo7PqQDJ0hjGd_7z8B', title: 'Role Plays: Sales Script (Session 2)' },
+          ]
+        },
+        {
+          id: 'reframing-value',
+          title: 'Reframing Value',
+          desc: 'Guided call reviews and calling debriefs: learn to reframe your offer as the best solution for the seller\'s situation.',
+          videos: [
+            { fileId: '1dVhpNO-mCjt_mc3xM6fDVNElCBrXMZGV', title: 'Guided Call Review' },
+            { fileId: '1IPtzdTMu546zhoTSRcFusAiAaQy_CY0b', title: 'Calling Debrief (Session 1)' },
+          ]
+        },
+        {
+          id: 'retrade-setup',
+          title: 'Retrade Setup',
+          desc: 'Contract-to-close overview, handling competitive bids, and setting up retrades using underwriting as leverage.',
+          videos: [
+            { fileId: '1wsOpZGuwhRP6ypOD60KKYknyxyx0I3rZ', title: 'C2C (Contract-to-Close) Overview' },
+            { fileId: '1egkKivRW6dYupi0eXZSfoGpKHOUMgRE7', title: 'Calling Debrief (Session 2)' },
+          ]
+        }
+      ],
+      quiz: [
+        { q: 'What is the first step in the 7-Step Objection Sequence?', choices: ['Counter with a higher offer', 'Acknowledge the objection and empathize with the seller', 'Ask to speak with their spouse', 'Offer to pay closing costs'], answer: 1 },
+        { q: 'When a seller says "I need to think about it," you should:', choices: ['Say "OK" and call back next week', 'Agree, then ask what specifically they need to think about to uncover the real objection', 'Increase your offer by 10%', 'Tell them the offer expires today'], answer: 1 },
+        { q: 'What does "reframing value" mean in acquisition?', choices: ['Changing the picture frames in the house', 'Repositioning your offer to highlight how it solves the seller\'s specific problem or need', 'Adjusting the ARV calculation', 'Refinancing the property'], answer: 1 },
+        { q: 'In a retrade, the representative should position the price reduction as coming from:', choices: ['Their personal decision', 'The underwriting/inspection findings from the firm', 'A competing buyer', 'The city building department'], answer: 1 },
+        { q: 'What is the "hero" strategy in negotiation?', choices: ['Pretending to be a superhero', 'Anchoring low, then coming back as if you fought for a slightly higher price, making the seller feel you advocated for them', 'Always offering the highest price', 'Saving the deal at the last minute'], answer: 1 },
+        { q: 'When should you walk away from a negotiation?', choices: ['Never - always close the deal', 'When the seller draws a hard line and shows zero flexibility on price', 'After the first objection', 'Only if your manager tells you to'], answer: 1 },
+        { q: 'What is C2C in the acquisition process?', choices: ['Cost to Customer', 'Contract-to-Close: the process from signed agreement to finalizing the deal', 'Cash to Cash flow', 'Comp to Comp analysis'], answer: 1 },
+        { q: 'During a guided call review, the main purpose is to:', choices: ['Criticize the caller\'s performance', 'Identify specific moments where different tactics could have improved the outcome', 'Just listen to recordings for fun', 'Check that scripts were read word-for-word'], answer: 1 },
+        { q: 'How do you handle a competitive bid situation?', choices: ['Always match the other offer', 'Emphasize certainty of close, speed, and flexibility as advantages over price alone', 'Tell the seller the other buyer is lying', 'Walk away immediately'], answer: 1 },
+        { q: 'If a seller shows ANY flexibility during negotiation, even a small concession, you should:', choices: ['Accept their terms immediately', 'Continue negotiating - small flexibility often leads to larger concessions', 'Walk away since they are difficult', 'Report them to your manager'], answer: 1 },
+      ]
+    }
+  ];
 
   // ---------------------------------------------------------------------------
   // Presentation Slides (from ARV Mastery PDF)
@@ -804,6 +952,9 @@
 
     var handlers = {
       'bootArvTraining': bootArvTraining,
+      'bootSalesLevel1': bootSalesLevel1,
+      'bootSalesLevel2': bootSalesLevel2,
+      'bootSalesLevel3': bootSalesLevel3,
     };
 
     if (handlers[handlerName]) {
@@ -976,6 +1127,335 @@
     });
 
     screen.appendChild(grid);
+    app.appendChild(screen);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Sales Training
+  // ---------------------------------------------------------------------------
+
+  function getSalesProgress() {
+    try {
+      var p = JSON.parse(localStorage.getItem(STORAGE_SALES) || 'null');
+      return p || { watchedVideos: {}, quizScores: {} };
+    } catch (_) { return { watchedVideos: {}, quizScores: {} }; }
+  }
+
+  function saveSalesProgress(p) {
+    try { localStorage.setItem(STORAGE_SALES, JSON.stringify(p)); } catch (_) {}
+  }
+
+  function markVideoWatched(levelId, videoFileId) {
+    var p = getSalesProgress();
+    if (!p.watchedVideos[levelId]) p.watchedVideos[levelId] = [];
+    if (p.watchedVideos[levelId].indexOf(videoFileId) === -1) {
+      p.watchedVideos[levelId].push(videoFileId);
+    }
+    saveSalesProgress(p);
+  }
+
+  function isLevelUnlocked(levelIndex) {
+    if (levelIndex === 0) return true;
+    var prevLevel = SALES_COURSE[levelIndex - 1];
+    var p = getSalesProgress();
+    return p.quizScores[prevLevel.id] >= 7; // need 70% to unlock next level
+  }
+
+  function bootSalesLevel1() { bootSalesLevel(0); }
+  function bootSalesLevel2() { bootSalesLevel(1); }
+  function bootSalesLevel3() { bootSalesLevel(2); }
+
+  function bootSalesLevel(levelIndex) {
+    var level = SALES_COURSE[levelIndex];
+    activeSection = level.id;
+    renderNav();
+    if (!isLevelUnlocked(levelIndex)) {
+      renderSalesLocked(levelIndex);
+    } else {
+      renderSalesLevelDash(levelIndex);
+    }
+  }
+
+  function renderSalesLocked(levelIndex) {
+    var level = SALES_COURSE[levelIndex];
+    var prev = SALES_COURSE[levelIndex - 1];
+    var app = clearApp();
+    var screen = el('div', { className: 'screen coming-soon-screen' });
+    screen.appendChild(el('div', { className: 'coming-soon-icon' }, '\uD83D\uDD12'));
+    screen.appendChild(el('h1', null, level.title));
+    screen.appendChild(el('p', { className: 'coming-soon-text' },
+      'Complete "' + prev.title + '" with a score of 70% or higher to unlock this level.'));
+    screen.appendChild(el('button', {
+      className: 'btn-primary',
+      onClick: function () { bootSalesLevel(levelIndex - 1); }
+    }, '\u2190 Go to ' + prev.title));
+    app.appendChild(screen);
+  }
+
+  function renderSalesLevelDash(levelIndex) {
+    var level = SALES_COURSE[levelIndex];
+    var p = getSalesProgress();
+    var app = clearApp();
+    var screen = el('div', { className: 'screen sales-dash-screen' });
+
+    // Header
+    var hdr = el('div', { className: 'sales-dash-header' });
+    hdr.appendChild(el('span', { className: 'sales-dash-icon' }, level.icon));
+    hdr.appendChild(el('h1', null, level.title));
+    hdr.appendChild(el('p', { className: 'sales-dash-subtitle' }, level.subtitle));
+    screen.appendChild(hdr);
+
+    // Module cards
+    var grid = el('div', { className: 'sales-module-grid' });
+    var totalVids = 0;
+    var watchedVids = 0;
+    level.modules.forEach(function (mod, modIdx) {
+      var card = el('div', { className: 'sales-module-card' });
+      card.appendChild(el('div', { className: 'sales-module-num' }, 'Module ' + (modIdx + 1)));
+      card.appendChild(el('h3', null, mod.title));
+      card.appendChild(el('p', null, mod.desc));
+
+      // Video count
+      var modWatched = 0;
+      mod.videos.forEach(function (v) {
+        totalVids++;
+        if (p.watchedVideos[level.id] && p.watchedVideos[level.id].indexOf(v.fileId) !== -1) {
+          modWatched++;
+          watchedVids++;
+        }
+      });
+      var vidStatus = el('div', { className: 'sales-module-status' },
+        '\uD83C\uDFAC ' + modWatched + '/' + mod.videos.length + ' videos watched');
+      card.appendChild(vidStatus);
+
+      var btn = el('button', {
+        className: modWatched === mod.videos.length ? 'btn-primary sales-mod-btn completed' : 'btn-primary sales-mod-btn',
+        onClick: (function (mi) {
+          return function () { renderSalesModule(levelIndex, mi); };
+        })(modIdx)
+      }, modWatched === mod.videos.length ? '\u2705 Review Module' : '\u25B6 Start Module');
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+    screen.appendChild(grid);
+
+    // Quiz section
+    var quizSection = el('div', { className: 'sales-quiz-section' });
+    var quizScore = p.quizScores[level.id];
+    var allWatched = watchedVids === totalVids;
+    quizSection.appendChild(el('h2', null, '\uD83D\uDCDD Level ' + (levelIndex + 1) + ' Assessment'));
+
+    if (quizScore !== undefined) {
+      var passed = quizScore >= 7;
+      quizSection.appendChild(el('p', { className: 'sales-quiz-score ' + (passed ? 'passed' : 'failed') },
+        'Score: ' + quizScore + '/10 ' + (passed ? '\u2705 Passed' : '\u274C Not passed (need 7/10)')));
+    }
+
+    if (!allWatched) {
+      quizSection.appendChild(el('p', { className: 'sales-quiz-locked' },
+        '\uD83D\uDD12 Watch all ' + totalVids + ' videos to unlock the assessment (' + watchedVids + '/' + totalVids + ' completed)'));
+    }
+
+    var quizBtn = el('button', {
+      className: 'btn-primary sales-quiz-btn' + (!allWatched ? ' btn-disabled' : ''),
+      onClick: allWatched ? function () { renderSalesQuiz(levelIndex); } : null,
+      disabled: !allWatched
+    }, quizScore !== undefined ? 'Retake Assessment' : 'Start Assessment');
+    quizSection.appendChild(quizBtn);
+
+    // Next level teaser
+    if (levelIndex < SALES_COURSE.length - 1 && quizScore >= 7) {
+      var nextLevel = SALES_COURSE[levelIndex + 1];
+      quizSection.appendChild(el('button', {
+        className: 'btn-primary sales-next-btn',
+        onClick: function () { bootSalesLevel(levelIndex + 1); }
+      }, 'Next: ' + nextLevel.title + ' \u2192'));
+    }
+
+    screen.appendChild(quizSection);
+
+    // Back button
+    screen.appendChild(el('button', {
+      className: 'btn-secondary sales-back-btn',
+      onClick: function () {
+        activeSection = null;
+        renderNav();
+        renderLandingPage();
+      }
+    }, '\u2190 Back to Home'));
+
+    app.appendChild(screen);
+  }
+
+  function renderSalesModule(levelIndex, moduleIndex) {
+    var level = SALES_COURSE[levelIndex];
+    var mod = level.modules[moduleIndex];
+    var p = getSalesProgress();
+    var app = clearApp();
+    var screen = el('div', { className: 'screen sales-module-screen' });
+
+    // Back to level
+    screen.appendChild(el('button', {
+      className: 'btn-secondary sales-back-btn',
+      onClick: function () { renderSalesLevelDash(levelIndex); }
+    }, '\u2190 Back to ' + level.title));
+
+    screen.appendChild(el('div', { className: 'sales-module-num' }, 'Module ' + (moduleIndex + 1) + ' of ' + level.modules.length));
+    screen.appendChild(el('h1', null, mod.title));
+    screen.appendChild(el('p', { className: 'sales-module-desc' }, mod.desc));
+
+    // Videos
+    mod.videos.forEach(function (v, vidIdx) {
+      var watched = p.watchedVideos[level.id] && p.watchedVideos[level.id].indexOf(v.fileId) !== -1;
+      var videoCard = el('div', { className: 'sales-video-card' + (watched ? ' watched' : '') });
+
+      var videoTitle = el('div', { className: 'sales-video-title' },
+        (watched ? '\u2705 ' : '\uD83C\uDFAC ') + v.title);
+      videoCard.appendChild(videoTitle);
+
+      var iframeWrapper = el('div', { className: 'sales-video-wrapper' });
+      var iframe = document.createElement('iframe');
+      iframe.src = 'https://drive.google.com/file/d/' + v.fileId + '/preview';
+      iframe.setAttribute('allow', 'autoplay; encrypted-media');
+      iframe.setAttribute('allowfullscreen', 'true');
+      iframe.setAttribute('frameborder', '0');
+      iframeWrapper.appendChild(iframe);
+      videoCard.appendChild(iframeWrapper);
+
+      if (!watched) {
+        var markBtn = el('button', {
+          className: 'btn-primary sales-mark-watched-btn',
+          onClick: (function (fid) {
+            return function () {
+              markVideoWatched(level.id, fid);
+              renderSalesModule(levelIndex, moduleIndex);
+            };
+          })(v.fileId)
+        }, '\u2705 Mark as Watched');
+        videoCard.appendChild(markBtn);
+      }
+
+      screen.appendChild(videoCard);
+    });
+
+    // Next module button
+    if (moduleIndex < level.modules.length - 1) {
+      screen.appendChild(el('button', {
+        className: 'btn-primary sales-next-btn',
+        onClick: function () { renderSalesModule(levelIndex, moduleIndex + 1); }
+      }, 'Next: ' + level.modules[moduleIndex + 1].title + ' \u2192'));
+    } else {
+      screen.appendChild(el('button', {
+        className: 'btn-primary sales-next-btn',
+        onClick: function () { renderSalesLevelDash(levelIndex); }
+      }, 'Back to Level Dashboard \u2192'));
+    }
+
+    app.appendChild(screen);
+  }
+
+  function renderSalesQuiz(levelIndex) {
+    var level = SALES_COURSE[levelIndex];
+    var questions = level.quiz;
+    var app = clearApp();
+    var screen = el('div', { className: 'screen sales-quiz-screen' });
+
+    screen.appendChild(el('h1', null, level.title + ' \u2013 Assessment'));
+    screen.appendChild(el('p', null, 'Answer all 10 questions. You need 7/10 (70%) to pass.'));
+
+    var form = el('div', { className: 'sales-quiz-form' });
+    var selected = {};
+
+    questions.forEach(function (qObj, qIdx) {
+      var qBlock = el('div', { className: 'sales-quiz-question' });
+      qBlock.appendChild(el('p', { className: 'sales-quiz-q-text' }, (qIdx + 1) + '. ' + qObj.q));
+
+      var opts = el('div', { className: 'sales-quiz-options' });
+      qObj.choices.forEach(function (choice, cIdx) {
+        var optLabel = el('label', { className: 'sales-quiz-option' });
+        var radio = document.createElement('input');
+        radio.type = 'radio';
+        radio.name = 'sq-' + qIdx;
+        radio.value = cIdx;
+        radio.addEventListener('change', function () { selected[qIdx] = cIdx; });
+        optLabel.appendChild(radio);
+        optLabel.appendChild(document.createTextNode(' ' + choice));
+        opts.appendChild(optLabel);
+      });
+      qBlock.appendChild(opts);
+      form.appendChild(qBlock);
+    });
+    screen.appendChild(form);
+
+    var submitBtn = el('button', {
+      className: 'btn-primary sales-quiz-submit',
+      onClick: function () {
+        // Count correct
+        var correct = 0;
+        for (var i = 0; i < questions.length; i++) {
+          if (selected[i] === questions[i].answer) correct++;
+        }
+        // Save
+        var p = getSalesProgress();
+        p.quizScores[level.id] = correct;
+        saveSalesProgress(p);
+        renderSalesQuizResults(levelIndex, correct, selected);
+      }
+    }, 'Submit Assessment');
+    screen.appendChild(submitBtn);
+
+    app.appendChild(screen);
+  }
+
+  function renderSalesQuizResults(levelIndex, score, selected) {
+    var level = SALES_COURSE[levelIndex];
+    var questions = level.quiz;
+    var passed = score >= 7;
+    var app = clearApp();
+    var screen = el('div', { className: 'screen sales-results-screen' });
+
+    screen.appendChild(el('h1', null, passed ? '\uD83C\uDF89 Level Complete!' : '\uD83D\uDCDA Keep Studying'));
+    screen.appendChild(el('div', { className: 'sales-results-score ' + (passed ? 'passed' : 'failed') },
+      score + '/10'));
+    screen.appendChild(el('p', null, passed
+      ? 'Congratulations! You passed ' + level.title + '.'
+      : 'You need 7/10 to pass. Review the modules and try again.'));
+
+    // Show answers
+    var review = el('div', { className: 'sales-results-review' });
+    questions.forEach(function (qObj, qIdx) {
+      var isCorrect = selected[qIdx] === qObj.answer;
+      var item = el('div', { className: 'sales-result-item ' + (isCorrect ? 'correct' : 'incorrect') });
+      item.appendChild(el('p', { className: 'sales-result-q' },
+        (isCorrect ? '\u2705 ' : '\u274C ') + (qIdx + 1) + '. ' + qObj.q));
+      if (!isCorrect) {
+        item.appendChild(el('p', { className: 'sales-result-answer' },
+          'Correct answer: ' + qObj.choices[qObj.answer]));
+      }
+      review.appendChild(item);
+    });
+    screen.appendChild(review);
+
+    // Action buttons
+    if (passed && levelIndex < SALES_COURSE.length - 1) {
+      screen.appendChild(el('button', {
+        className: 'btn-primary sales-next-btn',
+        onClick: function () { bootSalesLevel(levelIndex + 1); }
+      }, 'Next Level: ' + SALES_COURSE[levelIndex + 1].title + ' \u2192'));
+    }
+
+    screen.appendChild(el('button', {
+      className: passed ? 'btn-secondary' : 'btn-primary',
+      onClick: function () { renderSalesLevelDash(levelIndex); }
+    }, '\u2190 Back to ' + level.title));
+
+    if (!passed) {
+      screen.appendChild(el('button', {
+        className: 'btn-secondary',
+        onClick: function () { renderSalesQuiz(levelIndex); }
+      }, '\uD83D\uDD04 Retake Assessment'));
+    }
+
     app.appendChild(screen);
   }
 
