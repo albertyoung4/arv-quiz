@@ -65,14 +65,9 @@
     { grade: 'F', label: 'Worst',     desc: 'Major gut rehab',      min: 100001, max: Infinity },
   ];
 
-  // ARV grade ranges (A = Great / high value, F = Worst / low value)
-  var ARV_GRADE_RANGES = [
-    { grade: 'A', label: 'Great',     desc: '$200k+',        min: 200001, max: Infinity },
-    { grade: 'B', label: 'Good',      desc: '$150k\u2013$200k', min: 150001, max: 200000 },
-    { grade: 'C', label: 'Average',   desc: '$100k\u2013$150k', min: 100001, max: 150000 },
-    { grade: 'D', label: 'Below Avg', desc: '$50k\u2013$100k',  min: 50001,  max: 100000 },
-    { grade: 'F', label: 'Worst',     desc: 'Under $50k',    min: 0,      max: 50000 },
-  ];
+  // ARV choices are generated per-property (not fixed ranges).
+  // 5 options spaced ~10% apart; correct answer randomly placed among A–F.
+  var ARV_OPTION_MULTIPLIERS = [0.80, 0.90, 1.00, 1.10, 1.20];
 
   // Map grade-distance (0-4 steps off) to an equivalent "% off" for scoring
   var GRADE_DIFF_TO_PCT = [0, 12, 28, 45, 65];
@@ -251,6 +246,59 @@
 
   function useArvGrades(moduleIdx) { return moduleIdx < MC_ARV_CUTOFF; }
   function useRenoGrades() { return true; }
+
+  // Generate 5 ARV dollar-amount choices for a property.
+  // Returns { options: [{grade,value},...], correctGrade: 'B' }
+  function generateArvChoices(actualArv) {
+    // Build 5 values at ±10% intervals, round to nearest $5k
+    var values = ARV_OPTION_MULTIPLIERS.map(function (m) {
+      return Math.round((actualArv * m) / 5000) * 5000;
+    });
+    // De-dup: nudge any collisions by $5k
+    for (var i = 1; i < values.length; i++) {
+      while (values.slice(0, i).indexOf(values[i]) !== -1) {
+        values[i] += 5000;
+      }
+    }
+    // Shuffle so the correct answer (index 2, multiplier 1.00) lands randomly
+    var pairs = values.map(function (v, i) { return { value: v, isCorrect: i === 2 }; });
+    pairs = shuffleArray(pairs);
+    var correctGrade = null;
+    var options = pairs.map(function (p, i) {
+      var grade = GRADE_ORDER[i];
+      if (p.isCorrect) correctGrade = grade;
+      return { grade: grade, value: p.value };
+    });
+    return { options: options, correctGrade: correctGrade };
+  }
+
+  // Build a grade selector whose labels are dollar amounts (for ARV choices)
+  function buildArvChoiceSelector(choices, onSelect) {
+    var group = el('div', { className: 'grade-selector-group' });
+    group.appendChild(el('label', null, 'ARV Estimate'));
+    var options = el('div', { className: 'grade-options' });
+    var selectedBtn = null;
+
+    choices.options.forEach(function (opt) {
+      var btn = el('button', {
+        type: 'button',
+        className: 'grade-option',
+        onClick: function () {
+          if (selectedBtn) selectedBtn.classList.remove('grade-option-selected');
+          btn.classList.add('grade-option-selected');
+          selectedBtn = btn;
+          onSelect(opt);
+        },
+      },
+        el('span', { className: 'grade-option-letter ' + gradeClass(opt.grade) }, opt.grade),
+        el('span', { className: 'grade-option-label' }, formatDollars(opt.value))
+      );
+      options.appendChild(btn);
+    });
+
+    group.appendChild(options);
+    return group;
+  }
 
   // Build a row of grade-selection buttons
   function buildGradeSelector(label, ranges, onSelect) {
@@ -954,13 +1002,15 @@
     var form = el('div', { className: 'estimate-form' });
     var arvIsGraded = useArvGrades(currentModuleIndex);
     var renoIsGraded = useRenoGrades(currentModuleIndex);
-    var selectedArvGrade = null;
+    var selectedArvChoice = null;   // { grade, value } for MC ARV
     var selectedRenoGrade = null;
     var arvInput = null;
     var renoInput = null;
+    var arvChoices = null;
 
     if (arvIsGraded) {
-      form.appendChild(buildGradeSelector('ARV Estimate', ARV_GRADE_RANGES, function (g) { selectedArvGrade = g; }));
+      arvChoices = generateArvChoices(prop.estimatedArv);
+      form.appendChild(buildArvChoiceSelector(arvChoices, function (opt) { selectedArvChoice = opt; }));
     } else {
       var arvGroup = el('div', { className: 'input-group' });
       arvGroup.appendChild(el('label', { for: 'arv-input' }, 'Your ARV Estimate ($)'));
@@ -1005,10 +1055,11 @@
 
       // --- ARV ---
       if (arvIsGraded) {
-        if (!selectedArvGrade) { gradeError.style.display = 'block'; return; }
-        userArvGrade = selectedArvGrade;
-        correctArvGrade = getCorrectGrade(prop.estimatedArv, ARV_GRADE_RANGES);
-        arvPct = gradeDiffPct(userArvGrade, correctArvGrade);
+        if (!selectedArvChoice) { gradeError.style.display = 'block'; return; }
+        userArvGrade = selectedArvChoice.grade;
+        userArv = selectedArvChoice.value;
+        correctArvGrade = arvChoices.correctGrade;
+        arvPct = pctDiff(userArv, prop.estimatedArv);
       } else {
         userArv = parseDollarInput(arvInput.value);
         if (isNaN(userArv) || userArv <= 0) { arvInput.classList.add('input-error'); arvInput.focus(); return; }
@@ -1071,9 +1122,9 @@
 
     screen.appendChild(el('h2', null, prop.displayAddress));
 
-    // ARV comparison
+    // ARV comparison — graded ARV uses dollar-value comparison (user picked a dollar amount)
     if (result.arvIsGraded) {
-      screen.appendChild(buildGradeCompResult('ARV Estimate', result.userArvGrade, result.correctArvGrade, prop.estimatedArv, result.arvPct, result.arvGrade));
+      screen.appendChild(buildComparison('ARV Estimate', result.userArv, prop.estimatedArv, result.arvPct, result.arvGrade));
     } else {
       screen.appendChild(buildComparison('ARV Estimate', result.userArv, prop.estimatedArv, result.arvPct, result.arvGrade));
     }
@@ -1231,10 +1282,7 @@
 
     var table = el('div', { className: 'breakdown-table' });
     var header = el('div', { className: 'breakdown-row breakdown-header' });
-    var cols = ['Property'];
-    cols.push(arvGraded ? 'Your ARV' : 'Your ARV');
-    cols.push(arvGraded ? 'Correct' : 'Actual ARV');
-    cols.push('ARV %');
+    var cols = ['Property', 'Your ARV', 'Actual ARV', 'ARV %'];
     cols.push(renoGraded ? 'Your Reno' : 'Your Reno');
     cols.push(renoGraded ? 'Correct' : 'Actual Reno');
     cols.push('Reno %');
@@ -1249,16 +1297,9 @@
       var shortAddr = addr.length > 25 ? addr.slice(0, 23) + '...' : addr;
       row.appendChild(el('div', { className: 'breakdown-cell breakdown-address' }, shortAddr));
 
-      // ARV columns
-      if (r.arvIsGraded) {
-        row.appendChild(el('div', { className: 'breakdown-cell' },
-          el('span', { className: 'mini-grade ' + gradeClass(r.userArvGrade) }, r.userArvGrade)));
-        row.appendChild(el('div', { className: 'breakdown-cell' },
-          el('span', { className: 'mini-grade ' + gradeClass(r.correctArvGrade) }, r.correctArvGrade)));
-      } else {
-        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv)));
-        row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedArv)));
-      }
+      // ARV columns — always show dollar values (MC picks a dollar amount too)
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.userArv)));
+      row.appendChild(el('div', { className: 'breakdown-cell' }, formatDollars(r.property.estimatedArv)));
       row.appendChild(el('div', { className: 'breakdown-cell ' + (r.arvPct <= ARV_PASS_THRESHOLD ? 'text-good' : 'text-bad') }, r.arvPct.toFixed(1) + '%'));
 
       // Reno columns
