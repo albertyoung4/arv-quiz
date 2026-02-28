@@ -258,6 +258,23 @@ body {
 .mobile-nav-trigger-active {
   color: var(--primary);
 }
+.mobile-nav-direct-btn {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: .85rem 1.25rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--gray-100);
+  font-family: var(--font);
+  font-size: .95rem;
+  font-weight: 600;
+  color: var(--gray-700);
+  cursor: pointer;
+}
+.mobile-nav-direct-btn.mobile-nav-trigger-active {
+  color: var(--primary);
+}
 .mobile-nav-items {
   display: none;
   padding: 0 0 .5rem;

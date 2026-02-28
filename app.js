@@ -1161,19 +1161,56 @@
       }
     });
 
-    // History & Leaderboard direct nav buttons
+    // Dashboard, History & Leaderboard direct nav buttons
     if (getEmail()) {
+      if (isCompAnalysisDone()) {
+        var dashBtn = el('button', {
+          className: 'nav-trigger' + (activeSection === 'arv-training' ? ' nav-trigger-active' : ''),
+          onClick: function () {
+            closeAllDropdowns();
+            closeMobileNav();
+            activeSection = 'arv-training';
+            renderNav();
+            loadProperties().then(function () { renderDashboard(); }).catch(function () { renderDashboard(); });
+          }
+        }, '\uD83C\uDFE0 Dashboard');
+        nav.appendChild(dashBtn);
+      }
+
       var histBtn = el('button', {
         className: 'nav-trigger' + (activeSection === 'history' ? ' nav-trigger-active' : ''),
-        onClick: function () { closeAllDropdowns(); renderHistory(); }
+        onClick: function () { closeAllDropdowns(); closeMobileNav(); renderHistory(); }
       }, '\uD83D\uDCCA History');
       nav.appendChild(histBtn);
 
       var lbBtn = el('button', {
         className: 'nav-trigger' + (activeSection === 'leaderboard' ? ' nav-trigger-active' : ''),
-        onClick: function () { closeAllDropdowns(); renderLeaderboard(); }
+        onClick: function () { closeAllDropdowns(); closeMobileNav(); renderLeaderboard(); }
       }, '\uD83C\uDFC6 Leaders');
       nav.appendChild(lbBtn);
+
+      // Mobile equivalents
+      if (mobilePanel) {
+        if (isCompAnalysisDone()) {
+          mobilePanel.appendChild(el('button', {
+            className: 'mobile-nav-direct-btn' + (activeSection === 'arv-training' ? ' mobile-nav-trigger-active' : ''),
+            onClick: function () {
+              closeMobileNav();
+              activeSection = 'arv-training';
+              renderNav();
+              loadProperties().then(function () { renderDashboard(); }).catch(function () { renderDashboard(); });
+            }
+          }, '\uD83C\uDFE0 Dashboard'));
+        }
+        mobilePanel.appendChild(el('button', {
+          className: 'mobile-nav-direct-btn' + (activeSection === 'history' ? ' mobile-nav-trigger-active' : ''),
+          onClick: function () { closeMobileNav(); renderHistory(); }
+        }, '\uD83D\uDCCA History'));
+        mobilePanel.appendChild(el('button', {
+          className: 'mobile-nav-direct-btn' + (activeSection === 'leaderboard' ? ' mobile-nav-trigger-active' : ''),
+          onClick: function () { closeMobileNav(); renderLeaderboard(); }
+        }, '\uD83C\uDFC6 Leaders'));
+      }
     }
 
     // Wire hamburger
