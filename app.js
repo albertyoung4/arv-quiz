@@ -37,16 +37,19 @@
     } catch (_) { /* silent fail */ }
   }
 
-  var MODULES_COUNT = 10;
+  var MODULES_COUNT = 8;
   var QUESTIONS_PER_MODULE = 5;
   var ARV_PASS_THRESHOLD = 10;   // within 10%
   var RENO_PASS_THRESHOLD = 20;  // within 20%
+  var PRACTICE_MODULE_COUNT = 4; // Modules 0-3 are practice, 4-7 are test-out
+  var QUESTION_TIME_LIMIT = 600; // 10 minutes per question in seconds
 
   var STORAGE_EMAIL = 'rebuilt_arv_email';
   var STORAGE_PROGRESS = 'rebuilt_arv_progress';
   var STORAGE_PRES = 'rebuilt_arv_pres_done';
   var STORAGE_PROP_ORDER = 'rebuilt_arv_prop_order';
   var STORAGE_COMP_DONE = 'rebuilt_arv_comp_done';
+  var STORAGE_GRADES = 'rebuilt_arv_grades';
 
   var ADMIN_EMAILS = [
     'al@rebuilt.com',
@@ -88,9 +91,9 @@
     { grade: 'F', max: Infinity },
   ];
 
-  // Modules 0-4: both ARV + Reno are multiple-choice grades
-  // Modules 5-9: only Reno is multiple-choice grades, ARV is dollar input
-  var MC_ARV_CUTOFF = 5; // first 5 modules use MC for ARV
+  // Practice modules (0-3): both ARV + Reno are multiple-choice grades
+  // Test-out modules (4-7): only Reno is multiple-choice grades, ARV is dollar input
+  var MC_ARV_CUTOFF = 4; // first 4 modules (practice) use MC for ARV
 
   // Reno grade ranges (A = Great condition / low cost, F = Worst / high cost)
   var RENO_GRADE_RANGES = [
@@ -869,6 +872,9 @@
     var selectedBtn = null;
 
     ranges.forEach(function (range) {
+      var rangeText = range.max === Infinity
+        ? '$' + range.min.toLocaleString() + '+'
+        : '$' + range.min.toLocaleString() + ' – $' + range.max.toLocaleString();
       var btn = el('button', {
         type: 'button',
         className: 'grade-option',
@@ -881,7 +887,8 @@
       },
         el('span', { className: 'grade-option-letter ' + gradeClass(range.grade) }, range.grade),
         el('span', { className: 'grade-option-label' }, range.label),
-        el('span', { className: 'grade-option-desc' }, range.desc)
+        el('span', { className: 'grade-option-desc' }, range.desc),
+        el('span', { className: 'grade-option-range' }, rangeText)
       );
       options.appendChild(btn);
     });
@@ -990,6 +997,29 @@
 
   function setCompAnalysisDone() {
     try { localStorage.setItem(STORAGE_COMP_DONE, 'true'); } catch (_) {}
+  }
+
+  function getModuleGrades() {
+    try { return JSON.parse(localStorage.getItem(STORAGE_GRADES) || '{}'); } catch (_) { return {}; }
+  }
+
+  function saveModuleGrade(moduleIdx, arvPct, renoPct) {
+    var grades = getModuleGrades();
+    var key = String(moduleIdx);
+    var newAvg = (arvPct + renoPct) / 2;
+    var existing = grades[key];
+    // Save if first attempt or better than previous best
+    if (!existing || newAvg < (existing.arvPct + existing.renoPct) / 2) {
+      grades[key] = {
+        arvPct: parseFloat(arvPct.toFixed(1)),
+        renoPct: parseFloat(renoPct.toFixed(1)),
+        arvGrade: letterGrade(arvPct),
+        renoGrade: letterGrade(renoPct),
+        overallGrade: letterGrade(newAvg),
+        timestamp: new Date().toISOString()
+      };
+    }
+    try { localStorage.setItem(STORAGE_GRADES, JSON.stringify(grades)); } catch (_) {}
   }
 
   // ---------------------------------------------------------------------------
@@ -1979,6 +2009,12 @@
     return allProperties;
   }
 
+  function getModuleQuestionCount(moduleIdx) {
+    var start = moduleIdx * QUESTIONS_PER_MODULE;
+    var total = allProperties ? allProperties.length : 0;
+    return Math.min(QUESTIONS_PER_MODULE, total - start);
+  }
+
   function getModuleProperties(moduleIdx) {
     if (!allProperties) return [];
     var order = getPropertyOrder();
@@ -1987,7 +2023,7 @@
       savePropertyOrder(order);
     }
     var start = moduleIdx * QUESTIONS_PER_MODULE;
-    var end = start + QUESTIONS_PER_MODULE;
+    var end = start + getModuleQuestionCount(moduleIdx);
     var indices = order.slice(start, end);
     return indices.map(function (i) { return allProperties[i]; });
   }
@@ -2146,17 +2182,17 @@
             // Returning user — restore progress from sheet
             setPresentationDone();
             setCompAnalysisDone();
-            var passedModules = [];
+            var attemptedModules = [];
             userRows.forEach(function (r) {
-              if (r.Result === 'Pass' && r.Module && r.Module.indexOf('Module') === 0) {
+              if (r.Module && r.Module.indexOf('Module') === 0) {
                 var num = parseInt(r.Module.replace('Module ', ''), 10);
-                if (!isNaN(num) && passedModules.indexOf(num) === -1) {
-                  passedModules.push(num);
+                if (!isNaN(num) && attemptedModules.indexOf(num) === -1) {
+                  attemptedModules.push(num);
                 }
               }
             });
-            if (passedModules.length > 0) {
-              saveProgress({ completedModules: passedModules });
+            if (attemptedModules.length > 0) {
+              saveProgress({ completedModules: attemptedModules });
             }
             loadProperties().then(function () { renderDashboard(); }).catch(function () { renderDashboard(); });
           } else {
@@ -2545,13 +2581,16 @@
     screen.appendChild(form);
     app.appendChild(screen);
 
+    var compSubmitted = false;
     function handleCompSubmit() {
+      if (compSubmitted) return;
       var checkedIds = Object.keys(selectedIssues).filter(function (k) { return selectedIssues[k]; });
       if (checkedIds.length === 0 && !goodCompSelected) {
         errorMsg.style.display = 'block';
         return;
       }
 
+      compSubmitted = true;
       var userIssues = goodCompSelected ? [] : checkedIds;
       var correctIssues = comp.issues;
       var allIssueIds = COMP_ISSUES.map(function (i) { return i.id; });
@@ -2758,6 +2797,7 @@
     var completed = progress.completedModules;
     var level = completed.length;
     var info = LEVELS[Math.min(level, LEVELS.length - 1)];
+    var grades = getModuleGrades();
 
     // Check if all complete
     if (level >= MODULES_COUNT) {
@@ -2785,8 +2825,12 @@
     }
     screen.appendChild(pbar);
 
-    // Module grid
-    var grid = el('div', { className: 'dash-modules' });
+    // --- PRACTICE SECTION ---
+    var practiceSection = el('div', { className: 'dash-section dash-section-practice-wrap' });
+    practiceSection.appendChild(el('h2', { className: 'dash-section-title dash-section-practice' }, '\uD83D\uDCDD Practice'));
+    practiceSection.appendChild(el('p', { className: 'dash-section-desc' }, 'Build your skills with guided practice modules. Grades are tracked but not required to advance.'));
+
+    var practiceGrid = el('div', { className: 'dash-modules' });
 
     // Intro: Comp Analysis card (always complete at this point)
     var compCard = el('div', {
@@ -2798,51 +2842,63 @@
     compCard.appendChild(el('div', { className: 'mod-number' }, 'Intro'));
     compCard.appendChild(el('div', { className: 'mod-questions' }, 'Comp Analysis'));
     compCard.appendChild(el('div', { className: 'mod-status mod-status-pass' }, '\u2713 Passed'));
-    grid.appendChild(compCard);
+    practiceGrid.appendChild(compCard);
 
-    for (var m = 0; m < MODULES_COUNT; m++) {
-      (function (moduleIdx) {
-        var isCompleted = completed.indexOf(moduleIdx) !== -1;
-        var isUnlocked = moduleIdx === 0 || completed.indexOf(moduleIdx - 1) !== -1;
-        var isCurrent = moduleIdx === level;
+    // Helper to build a module card
+    function buildModuleCard(moduleIdx) {
+      var isCompleted = completed.indexOf(moduleIdx) !== -1;
+      var gradeData = grades[String(moduleIdx)];
+      var isPractice = moduleIdx < PRACTICE_MODULE_COUNT;
 
-        var card = el('div', {
-          className: 'dash-module-card' +
-            (isCompleted ? ' mod-complete' : '') +
-            (isCurrent ? ' mod-current' : '') +
-            (!isUnlocked && !isCompleted ? ' mod-locked' : ''),
-        });
+      var card = el('div', {
+        className: 'dash-module-card' +
+          (isCompleted ? ' mod-complete' : '') +
+          (isPractice ? ' mod-practice' : ' mod-testout'),
+      });
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', function () { startModule(moduleIdx); });
 
-        var icon = isCompleted ? '\u2705' : (isUnlocked ? '\uD83D\uDCCB' : '\uD83D\uDD12');
-        card.appendChild(el('div', { className: 'mod-icon' }, icon));
-        card.appendChild(el('div', { className: 'mod-number' }, 'Module ' + (moduleIdx + 1)));
-        card.appendChild(el('div', { className: 'mod-questions' }, QUESTIONS_PER_MODULE + ' properties'));
+      var icon = isCompleted ? '\u2705' : '\uD83D\uDCCB';
+      card.appendChild(el('div', { className: 'mod-icon' }, icon));
+      card.appendChild(el('div', { className: 'mod-number' }, (isPractice ? 'Practice ' : 'Test ') + (isPractice ? (moduleIdx + 1) : (moduleIdx - PRACTICE_MODULE_COUNT + 1))));
+      card.appendChild(el('div', { className: 'mod-questions' }, getModuleQuestionCount(moduleIdx) + ' properties'));
 
-        if (isCompleted) {
-          card.appendChild(el('div', { className: 'mod-status mod-status-pass' }, '\u2713 Passed'));
-        } else if (isCurrent) {
-          card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Ready'));
-        } else if (!isUnlocked) {
-          card.appendChild(el('div', { className: 'mod-status mod-status-locked' }, 'Locked'));
-        } else {
-          card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Available'));
-        }
+      if (gradeData) {
+        var gradeEl = el('div', { className: 'mod-grade' },
+          el('span', { className: 'grade-badge ' + gradeClass(gradeData.overallGrade) }, gradeData.overallGrade),
+          el('span', { className: 'mod-grade-detail' }, 'ARV: ' + gradeData.arvPct + '% | Reno: ' + gradeData.renoPct + '%')
+        );
+        card.appendChild(gradeEl);
+        card.appendChild(el('div', { className: 'mod-status mod-status-retake' }, '\uD83D\uDD01 Retake'));
+      } else {
+        card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Ready'));
+      }
 
-        if (isUnlocked || isCompleted) {
-          card.style.cursor = 'pointer';
-          card.addEventListener('click', function () {
-            startModule(moduleIdx);
-          });
-        }
-
-        grid.appendChild(card);
-      })(m);
+      return card;
     }
-    screen.appendChild(grid);
 
-    // Pass criteria note
+    // Practice modules (0-3)
+    for (var m = 0; m < PRACTICE_MODULE_COUNT; m++) {
+      practiceGrid.appendChild(buildModuleCard(m));
+    }
+    practiceSection.appendChild(practiceGrid);
+    screen.appendChild(practiceSection);
+
+    // --- TEST OUT SECTION ---
+    var testSection = el('div', { className: 'dash-section dash-section-testout-wrap' });
+    testSection.appendChild(el('h2', { className: 'dash-section-title dash-section-testout' }, '\uD83C\uDFAF Test Out'));
+    testSection.appendChild(el('p', { className: 'dash-section-desc' }, 'Prove your skills. These modules count toward your final certification.'));
+
+    var testGrid = el('div', { className: 'dash-modules' });
+    for (var t = PRACTICE_MODULE_COUNT; t < MODULES_COUNT; t++) {
+      testGrid.appendChild(buildModuleCard(t));
+    }
+    testSection.appendChild(testGrid);
+    screen.appendChild(testSection);
+
+    // Grading note
     screen.appendChild(el('div', { className: 'dash-criteria' },
-      el('p', null, '\uD83C\uDFAF Pass criteria: Average ARV within ' + ARV_PASS_THRESHOLD + '% and Rehab within ' + RENO_PASS_THRESHOLD + '% across all 5 properties in the module.')
+      el('p', null, '\uD83C\uDFAF Grading: ARV accuracy within ' + ARV_PASS_THRESHOLD + '% and Rehab within ' + RENO_PASS_THRESHOLD + '% earns a passing grade. You can retake any module to improve your score.')
     ));
 
     // Context buttons (History, Leaders, View Training)
@@ -2887,8 +2943,8 @@
       await loadProperties();
       moduleProperties = getModuleProperties(moduleIdx);
 
-      if (moduleProperties.length < QUESTIONS_PER_MODULE) {
-        renderError('Not enough properties for this module. Need ' + QUESTIONS_PER_MODULE + ' but only found ' + moduleProperties.length + '.');
+      if (moduleProperties.length === 0) {
+        renderError('No properties available for this module.');
         return;
       }
 
@@ -2915,16 +2971,18 @@
     var answered = moduleResults.length;
     var avgArv = answered > 0 ? (runningArvPctSum / answered).toFixed(1) : '\u2014';
     var avgReno = answered > 0 ? (runningRenoPctSum / answered).toFixed(1) : '\u2014';
+    var isPractice = currentModuleIndex < PRACTICE_MODULE_COUNT;
+    var moduleLabel = isPractice ? 'Practice ' + (currentModuleIndex + 1) : 'Test ' + (currentModuleIndex - PRACTICE_MODULE_COUNT + 1);
 
     return el('div', { className: 'score-tracker' },
-      el('span', null, 'Module ' + (currentModuleIndex + 1) + ' \u2022 Question ' + (currentQuestionIndex + 1) + '/' + QUESTIONS_PER_MODULE),
+      el('span', null, moduleLabel + ' \u2022 Question ' + (currentQuestionIndex + 1) + '/' + moduleProperties.length),
       el('span', null, 'Avg ARV: ' + avgArv + '% off'),
       el('span', null, 'Avg Reno: ' + avgReno + '% off')
     );
   }
 
   function buildModuleProgress() {
-    var pct = (currentQuestionIndex / QUESTIONS_PER_MODULE) * 100;
+    var pct = (currentQuestionIndex / moduleProperties.length) * 100;
     var bar = el('div', { className: 'progress-bar' });
     bar.appendChild(el('div', { className: 'progress-fill', style: { width: pct + '%' } }));
     return bar;
@@ -2938,17 +2996,47 @@
     var app = clearApp();
 
     var prop = moduleProperties[currentQuestionIndex];
+    // Snapshot property data to prevent any mutation issues
+    var propSnapshot = JSON.parse(JSON.stringify(prop));
     var screen = el('div', { className: 'screen quiz-screen' });
 
     screen.appendChild(buildModuleTracker());
     screen.appendChild(buildModuleProgress());
 
+    // --- 10-minute countdown timer ---
+    var timeRemaining = QUESTION_TIME_LIMIT;
+    var timerEl = el('div', { className: 'question-timer' },
+      el('span', { className: 'timer-icon' }, '\u23F1'),
+      el('span', { className: 'timer-text' }, formatTime(timeRemaining))
+    );
+    screen.appendChild(timerEl);
+
+    var timerInterval = setInterval(function () {
+      timeRemaining--;
+      var timerText = timerEl.querySelector('.timer-text');
+      if (timerText) timerText.textContent = formatTime(timeRemaining);
+      if (timeRemaining <= 60) {
+        timerEl.classList.add('timer-warning');
+      }
+      if (timeRemaining <= 0) {
+        clearInterval(timerInterval);
+        // Auto-submit with whatever is currently entered
+        handleSubmit(true);
+      }
+    }, 1000);
+
+    function formatTime(seconds) {
+      var m = Math.floor(seconds / 60);
+      var s = seconds % 60;
+      return m + ':' + (s < 10 ? '0' : '') + s;
+    }
+
     var card = el('div', { className: 'property-card' });
 
     // --- Photo carousel with thumbnails ---
-    var rawImages = (prop.imageUrls && prop.imageUrls.length > 0)
-      ? prop.imageUrls
-      : [prop.thumbnailUrl || PLACEHOLDER_IMG];
+    var rawImages = (propSnapshot.imageUrls && propSnapshot.imageUrls.length > 0)
+      ? propSnapshot.imageUrls
+      : [propSnapshot.thumbnailUrl || PLACEHOLDER_IMG];
     var images = rawImages.map(fixImageUrl);
     var carouselIdx = 0;
 
@@ -2956,7 +3044,7 @@
     var carouselImg = el('img', {
       className: 'carousel-image',
       src: images[0] || PLACEHOLDER_IMG,
-      alt: prop.displayAddress || 'Property photo',
+      alt: propSnapshot.displayAddress || 'Property photo',
       referrerpolicy: 'no-referrer',
     });
     carouselImg.addEventListener('error', function () { carouselImg.src = PLACEHOLDER_IMG; });
@@ -3037,24 +3125,24 @@
     card.appendChild(carousel);
 
     // Address
-    card.appendChild(el('h2', { className: 'property-address' }, prop.displayAddress || 'Address unavailable'));
+    card.appendChild(el('h2', { className: 'property-address' }, propSnapshot.displayAddress || 'Address unavailable'));
 
     // Stats grid (NO list price)
     var stats = el('div', { className: 'property-stats' });
     var lotDisplay = '\u2014';
-    if (prop.lotSize) {
-      if (prop.lotSize >= 43560) {
-        lotDisplay = (prop.lotSize / 43560).toFixed(2) + ' ac';
+    if (propSnapshot.lotSize) {
+      if (propSnapshot.lotSize >= 43560) {
+        lotDisplay = (propSnapshot.lotSize / 43560).toFixed(2) + ' ac';
       } else {
-        lotDisplay = Math.round(prop.lotSize).toLocaleString() + ' sqft';
+        lotDisplay = Math.round(propSnapshot.lotSize).toLocaleString() + ' sqft';
       }
     }
     var statItems = [
-      ['Beds', prop.beds || '\u2014'],
-      ['Baths', prop.baths || '\u2014'],
-      ['Sqft', prop.livingArea ? prop.livingArea.toLocaleString() : '\u2014'],
-      ['Year Built', prop.yearBuilt || '\u2014'],
-      ['Type', prop.houseType || '\u2014'],
+      ['Beds', propSnapshot.beds || '\u2014'],
+      ['Baths', propSnapshot.baths || '\u2014'],
+      ['Sqft', propSnapshot.livingArea ? propSnapshot.livingArea.toLocaleString() : '\u2014'],
+      ['Year Built', propSnapshot.yearBuilt || '\u2014'],
+      ['Type', propSnapshot.houseType || '\u2014'],
       ['Lot', lotDisplay],
     ];
     statItems.forEach(function (pair) {
@@ -3066,7 +3154,7 @@
     card.appendChild(stats);
 
     // Google Maps embed (satellite view)
-    var addr = prop.displayAddress || '';
+    var addr = propSnapshot.displayAddress || '';
     var mapQuery = encodeURIComponent(addr);
     var mapIframe = el('iframe', {
       className: 'property-map',
@@ -3125,7 +3213,7 @@
     var arvChoices = null;
 
     if (arvIsGraded) {
-      arvChoices = generateArvChoices(prop.estimatedArv);
+      arvChoices = generateArvChoices(propSnapshot.estimatedArv);
       form.appendChild(buildArvChoiceSelector(arvChoices, function (opt) { selectedArvChoice = opt; }));
     } else {
       var arvGroup = el('div', { className: 'input-group' });
@@ -3149,10 +3237,10 @@
 
     // Admin answer hints
     if (isAdmin()) {
-      var correctArvText = '$' + prop.estimatedArv.toLocaleString();
-      var correctRenoText = '$' + prop.estimatedRenovation.toLocaleString();
+      var correctArvText = '$' + propSnapshot.estimatedArv.toLocaleString();
+      var correctRenoText = '$' + propSnapshot.estimatedRenovation.toLocaleString();
       if (arvIsGraded) correctArvText += ' (Grade ' + arvChoices.correctGrade + ')';
-      if (renoIsGraded) correctRenoText += ' (Grade ' + getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES) + ')';
+      if (renoIsGraded) correctRenoText += ' (Grade ' + getCorrectGrade(propSnapshot.estimatedRenovation, RENO_GRADE_RANGES) + ')';
       var adminBanner = el('div', { className: 'admin-answer-banner' },
         el('span', { className: 'admin-answer-icon' }, '\uD83D\uDD11'),
         el('span', null, 'Admin \u2014 ARV: ' + correctArvText + '  |  Reno: ' + correctRenoText)
@@ -3170,7 +3258,7 @@
         });
       }
       if (renoIsGraded) {
-        var correctRenoGradeVal = getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES);
+        var correctRenoGradeVal = getCorrectGrade(propSnapshot.estimatedRenovation, RENO_GRADE_RANGES);
         var renoGroups = form.querySelectorAll('.grade-selector-group');
         var renoGroup = renoGroups[renoGroups.length - 1];
         renoGroup.querySelectorAll('.grade-option').forEach(function (btn) {
@@ -3196,7 +3284,7 @@
     document.addEventListener('keydown', onKeyDown);
     var submitted = false;
 
-    function handleSubmit() {
+    function handleSubmit(autoSubmit) {
       if (submitted) return;
 
       var userArv = null, userReno = null;
@@ -3206,30 +3294,59 @@
 
       // --- ARV ---
       if (arvIsGraded) {
-        if (!selectedArvChoice) { gradeError.style.display = 'block'; return; }
-        userArvGrade = selectedArvChoice.grade;
-        userArv = selectedArvChoice.value;
-        correctArvGrade = arvChoices.correctGrade;
-        arvPct = pctDiff(userArv, prop.estimatedArv);
+        if (!selectedArvChoice) {
+          if (autoSubmit) {
+            // Pick worst possible answer on timeout
+            userArvGrade = 'F';
+            userArv = 0;
+            correctArvGrade = arvChoices.correctGrade;
+            arvPct = 100;
+          } else {
+            gradeError.style.display = 'block'; return;
+          }
+        } else {
+          userArvGrade = selectedArvChoice.grade;
+          userArv = selectedArvChoice.value;
+          correctArvGrade = arvChoices.correctGrade;
+          arvPct = pctDiff(userArv, propSnapshot.estimatedArv);
+        }
       } else {
         userArv = parseDollarInput(arvInput.value);
-        if (isNaN(userArv) || userArv <= 0) { arvInput.classList.add('input-error'); arvInput.focus(); return; }
-        arvPct = pctDiff(userArv, prop.estimatedArv);
+        if (isNaN(userArv) || userArv <= 0) {
+          if (autoSubmit) { userArv = 0; arvPct = 100; }
+          else { arvInput.classList.add('input-error'); arvInput.focus(); return; }
+        } else {
+          arvPct = pctDiff(userArv, propSnapshot.estimatedArv);
+        }
       }
 
       // --- Reno ---
       if (renoIsGraded) {
-        if (!selectedRenoGrade) { gradeError.style.display = 'block'; return; }
-        userRenoGrade = selectedRenoGrade;
-        correctRenoGrade = getCorrectGrade(prop.estimatedRenovation, RENO_GRADE_RANGES);
-        renoPct = gradeDiffPct(userRenoGrade, correctRenoGrade);
+        if (!selectedRenoGrade) {
+          if (autoSubmit) {
+            userRenoGrade = 'F';
+            correctRenoGrade = getCorrectGrade(propSnapshot.estimatedRenovation, RENO_GRADE_RANGES);
+            renoPct = 65;
+          } else {
+            gradeError.style.display = 'block'; return;
+          }
+        } else {
+          userRenoGrade = selectedRenoGrade;
+          correctRenoGrade = getCorrectGrade(propSnapshot.estimatedRenovation, RENO_GRADE_RANGES);
+          renoPct = gradeDiffPct(userRenoGrade, correctRenoGrade);
+        }
       } else {
         userReno = parseDollarInput(renoInput.value);
-        if (isNaN(userReno) || userReno <= 0) { renoInput.classList.add('input-error'); renoInput.focus(); return; }
-        renoPct = pctDiff(userReno, prop.estimatedRenovation);
+        if (isNaN(userReno) || userReno <= 0) {
+          if (autoSubmit) { userReno = 0; renoPct = 100; }
+          else { renoInput.classList.add('input-error'); renoInput.focus(); return; }
+        } else {
+          renoPct = pctDiff(userReno, propSnapshot.estimatedRenovation);
+        }
       }
 
       submitted = true;
+      clearInterval(timerInterval);
       document.removeEventListener('keydown', onKeyDown);
 
       var arvGrade = letterGrade(arvPct);
@@ -3239,7 +3356,7 @@
       runningRenoPctSum += renoPct;
 
       var result = {
-        property: prop,
+        property: propSnapshot,
         userArv: userArv,
         userReno: userReno,
         userArvGrade: userArvGrade,
@@ -3252,6 +3369,7 @@
         renoGrade: renoGrade,
         arvIsGraded: arvIsGraded,
         renoIsGraded: renoIsGraded,
+        timedOut: !!autoSubmit,
       };
       moduleResults.push(result);
       renderResultScreen(result);
@@ -3303,7 +3421,7 @@
       'Reno: ' + result.renoPct.toFixed(1) + '% off ' + (renoPass ? '\u2713 Within ' + RENO_PASS_THRESHOLD + '%' : '\u2717 Over ' + RENO_PASS_THRESHOLD + '% threshold')));
     screen.appendChild(reveal);
 
-    var isLast = currentQuestionIndex + 1 >= QUESTIONS_PER_MODULE;
+    var isLast = currentQuestionIndex + 1 >= moduleProperties.length;
     screen.appendChild(el('button', {
       className: 'btn-primary',
       onClick: function () {
@@ -3399,16 +3517,20 @@
     var arvPassed = avgArvPct <= ARV_PASS_THRESHOLD;
     var renoPassed = avgRenoPct <= RENO_PASS_THRESHOLD;
     var modulePassed = arvPassed && renoPassed;
+    var overallAvg = (avgArvPct + avgRenoPct) / 2;
+    var overallGrade = letterGrade(overallAvg);
+    var isPractice = currentModuleIndex < PRACTICE_MODULE_COUNT;
+    var moduleLabel = isPractice ? 'Practice ' + (currentModuleIndex + 1) : 'Test ' + (currentModuleIndex - PRACTICE_MODULE_COUNT + 1);
 
-    screen.appendChild(el('h1', null, 'Module ' + (currentModuleIndex + 1) + ' Results'));
+    screen.appendChild(el('h1', null, moduleLabel + ' Results'));
 
-    // Big pass/fail badge
-    var badge = el('div', { className: 'module-badge ' + (modulePassed ? 'badge-pass' : 'badge-fail') },
-      modulePassed ? '\u2705' : '\u274C'
+    // Big grade badge
+    var badge = el('div', { className: 'module-badge badge-grade ' + gradeClass(overallGrade) },
+      overallGrade
     );
     screen.appendChild(badge);
-    screen.appendChild(el('h2', { className: 'module-verdict ' + (modulePassed ? 'text-good' : 'text-bad') },
-      modulePassed ? 'Module Passed!' : 'Module Failed'
+    screen.appendChild(el('h2', { className: 'module-verdict' },
+      'Overall Grade: ' + overallGrade + (modulePassed ? ' \u2014 Passing!' : '')
     ));
 
     // Stats
@@ -3472,28 +3594,25 @@
     // Log to Google Sheets (always, pass or fail)
     logToSheets(currentModuleIndex, modulePassed, avgArvPct, avgRenoPct, moduleResults);
 
-    // Save progress if passed
-    if (modulePassed) {
-      var progress = getProgress();
-      if (progress.completedModules.indexOf(currentModuleIndex) === -1) {
-        progress.completedModules.push(currentModuleIndex);
-        progress.completedModules.sort(function (a, b) { return a - b; });
-        saveProgress(progress);
-      }
+    // Always save grade and mark module as completed (attempted)
+    saveModuleGrade(currentModuleIndex, avgArvPct, avgRenoPct);
+    var progress = getProgress();
+    if (progress.completedModules.indexOf(currentModuleIndex) === -1) {
+      progress.completedModules.push(currentModuleIndex);
+      progress.completedModules.sort(function (a, b) { return a - b; });
+      saveProgress(progress);
     }
 
-    // Buttons
+    // Buttons - always show retake and continue
     var btnRow = el('div', { className: 'btn-row' });
-    if (!modulePassed) {
-      btnRow.appendChild(el('button', {
-        className: 'btn-primary',
-        onClick: function () { startModule(currentModuleIndex); }
-      }, '\uD83D\uDD01 Retry Module'));
-    }
     btnRow.appendChild(el('button', {
-      className: modulePassed ? 'btn-primary' : 'btn-secondary',
+      className: 'btn-secondary',
+      onClick: function () { startModule(currentModuleIndex); }
+    }, '\uD83D\uDD01 Retake Module'));
+    btnRow.appendChild(el('button', {
+      className: 'btn-primary',
       onClick: renderDashboard
-    }, modulePassed ? 'Continue \u2192' : 'Back to Dashboard'));
+    }, 'Continue \u2192'));
     screen.appendChild(btnRow);
 
     app.appendChild(screen);
@@ -3550,6 +3669,7 @@
         try { localStorage.removeItem(STORAGE_PROP_ORDER); } catch (_) {}
         try { localStorage.removeItem(STORAGE_COMP_DONE); } catch (_) {}
         try { localStorage.removeItem(STORAGE_SLACK_POSTED); } catch (_) {}
+        try { localStorage.removeItem(STORAGE_GRADES); } catch (_) {}
         renderDashboard();
       }
     }, '\uD83D\uDD04 Reset & Start Over'));
