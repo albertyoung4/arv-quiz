@@ -4035,62 +4035,150 @@
         return;
       }
 
-      var table = el('div', { className: 'history-table' });
+      // --- Name multi-select filter ---
+      var selectedNames = {};
+      users.forEach(function (u) { selectedNames[u.email] = true; });
 
-      // Header
-      var header = el('div', { className: 'history-row history-header cert-row cert-header' });
-      header.appendChild(el('div', { className: 'history-cell' }, 'Name'));
-      ALL_MODULES.forEach(function (m) {
-        var cell = el('div', { className: 'history-cell' + (m.testOut ? ' cert-testout' : '') });
-        cell.appendChild(document.createTextNode(m.label));
-        if (m.testOut) {
-          cell.appendChild(el('span', { className: 'cert-testout-label' }, 'Test Out'));
-        }
-        header.appendChild(cell);
-      });
-      header.appendChild(el('div', { className: 'history-cell' }, 'Status'));
-      table.appendChild(header);
+      var filterWrap = el('div', { className: 'cert-filter-wrap' });
+      var filterLabel = el('span', { className: 'cert-filter-label' }, 'Filter by name:');
+      filterWrap.appendChild(filterLabel);
 
-      // Rows
+      var filterBox = el('div', { className: 'cert-filter-box' });
+      var filterToggle = el('button', { className: 'cert-filter-toggle' });
+      filterToggle.innerHTML = 'All selected <span class="cert-filter-arrow">&#9662;</span>';
+      filterBox.appendChild(filterToggle);
+
+      var filterDropdown = el('div', { className: 'cert-filter-dropdown' });
+
+      var filterActions = el('div', { className: 'cert-filter-actions' });
+      var selectAllBtn = el('button', { className: 'cert-filter-action-btn' }, 'Select All');
+      var clearAllBtn = el('button', { className: 'cert-filter-action-btn' }, 'Clear All');
+      filterActions.appendChild(selectAllBtn);
+      filterActions.appendChild(clearAllBtn);
+      filterDropdown.appendChild(filterActions);
+
+      var filterList = el('div', { className: 'cert-filter-list' });
       users.forEach(function (u) {
-        var tr = el('div', { className: 'history-row cert-row' + (u.certified ? ' cert-certified' : '') });
-        var nameCell = el('div', { className: 'history-cell', style: { fontWeight: '600', cursor: 'pointer', textDecoration: 'underline', color: 'var(--primary)' } }, u.displayName);
-        nameCell.onclick = (function (user, rows) { return function () { showUserVarianceChart(user, rows); }; })(u, data.rows);
-        tr.appendChild(nameCell);
+        var item = el('label', { className: 'cert-filter-item' });
+        var cb = el('input', { type: 'checkbox', checked: 'checked' });
+        cb.checked = true;
+        cb.addEventListener('change', (function (email) {
+          return function () {
+            selectedNames[email] = this.checked;
+            rebuildCertTable();
+          };
+        })(u.email));
+        item.appendChild(cb);
+        item.appendChild(document.createTextNode(' ' + u.displayName));
+        filterList.appendChild(item);
+      });
+      filterDropdown.appendChild(filterList);
+      filterBox.appendChild(filterDropdown);
+      filterWrap.appendChild(filterBox);
+      tableContainer.appendChild(filterWrap);
 
+      var dropdownOpen = false;
+      filterToggle.addEventListener('click', function () {
+        dropdownOpen = !dropdownOpen;
+        filterDropdown.classList.toggle('cert-filter-dropdown-open', dropdownOpen);
+        filterToggle.classList.toggle('cert-filter-toggle-open', dropdownOpen);
+      });
+
+      document.addEventListener('click', function closeDropdown(e) {
+        if (!filterBox.contains(e.target)) {
+          dropdownOpen = false;
+          filterDropdown.classList.remove('cert-filter-dropdown-open');
+          filterToggle.classList.remove('cert-filter-toggle-open');
+        }
+      });
+
+      function updateToggleLabel() {
+        var count = 0;
+        for (var e in selectedNames) if (selectedNames[e]) count++;
+        var txt = count === users.length ? 'All selected' : count === 0 ? 'None selected' : count + ' of ' + users.length + ' selected';
+        filterToggle.innerHTML = txt + ' <span class="cert-filter-arrow">&#9662;</span>';
+      }
+
+      selectAllBtn.addEventListener('click', function () {
+        users.forEach(function (u) { selectedNames[u.email] = true; });
+        filterList.querySelectorAll('input').forEach(function (cb) { cb.checked = true; });
+        rebuildCertTable();
+      });
+      clearAllBtn.addEventListener('click', function () {
+        users.forEach(function (u) { selectedNames[u.email] = false; });
+        filterList.querySelectorAll('input').forEach(function (cb) { cb.checked = false; });
+        rebuildCertTable();
+      });
+
+      // --- Table container for rebuild ---
+      var tableInner = el('div');
+      tableContainer.appendChild(tableInner);
+
+      function rebuildCertTable() {
+        tableInner.innerHTML = '';
+        updateToggleLabel();
+
+        var filtered = users.filter(function (u) { return selectedNames[u.email]; });
+
+        var table = el('div', { className: 'history-table' });
+
+        // Header
+        var header = el('div', { className: 'history-row history-header cert-row cert-header' });
+        header.appendChild(el('div', { className: 'history-cell' }, 'Name'));
         ALL_MODULES.forEach(function (m) {
-          var mod = u.modules[m.key];
-          var cellText, cellClass;
-          if (mod.passed) {
-            cellText = '\u2705';
-            cellClass = 'history-cell text-good';
-          } else if (mod.attempted) {
-            cellText = '\u274C';
-            cellClass = 'history-cell text-bad';
-          } else {
-            cellText = '\u25A1';
-            cellClass = 'history-cell';
+          var cell = el('div', { className: 'history-cell' + (m.testOut ? ' cert-testout' : '') });
+          cell.appendChild(document.createTextNode(m.label));
+          if (m.testOut) {
+            cell.appendChild(el('span', { className: 'cert-testout-label' }, 'Test Out'));
           }
-          if (m.testOut) cellClass += ' cert-testout';
-          tr.appendChild(el('div', { className: cellClass }, cellText));
+          header.appendChild(cell);
+        });
+        header.appendChild(el('div', { className: 'history-cell' }, 'Status'));
+        table.appendChild(header);
+
+        // Rows
+        filtered.forEach(function (u) {
+          var tr = el('div', { className: 'history-row cert-row' + (u.certified ? ' cert-certified' : '') });
+          var nameCell = el('div', { className: 'history-cell', style: { fontWeight: '600', cursor: 'pointer', textDecoration: 'underline', color: 'var(--primary)' } }, u.displayName);
+          nameCell.onclick = (function (user, rows) { return function () { showUserVarianceChart(user, rows); }; })(u, data.rows);
+          tr.appendChild(nameCell);
+
+          ALL_MODULES.forEach(function (m) {
+            var mod = u.modules[m.key];
+            var cellText, cellClass;
+            if (mod.passed) {
+              cellText = '\u2705';
+              cellClass = 'history-cell text-good';
+            } else if (mod.attempted) {
+              cellText = '\u274C';
+              cellClass = 'history-cell text-bad';
+            } else {
+              cellText = '\u25A1';
+              cellClass = 'history-cell';
+            }
+            if (m.testOut) cellClass += ' cert-testout';
+            tr.appendChild(el('div', { className: cellClass }, cellText));
+          });
+
+          var certCell = u.certified
+            ? el('div', { className: 'history-cell text-good', style: { fontWeight: '700' } }, '\u2705 YES')
+            : el('div', { className: 'history-cell text-bad', style: { fontWeight: '700' } }, '\u274C NO');
+          tr.appendChild(certCell);
+
+          table.appendChild(tr);
         });
 
-        var certCell = u.certified
-          ? el('div', { className: 'history-cell text-good', style: { fontWeight: '700' } }, '\u2705 YES')
-          : el('div', { className: 'history-cell text-bad', style: { fontWeight: '700' } }, '\u274C NO');
-        tr.appendChild(certCell);
+        tableInner.appendChild(table);
 
-        table.appendChild(tr);
-      });
+        // Summary
+        var certCount = filtered.filter(function (u) { return u.certified; }).length;
+        var legend = el('p', { className: 'history-count', style: { marginTop: '12px' } },
+          certCount + ' of ' + filtered.length + ' certified  |  \u2705 Pass  |  \u274C Fail  |  \u25A1 Not Attempted  |  Highlighted = Test Out'
+        );
+        tableInner.appendChild(legend);
+      }
 
-      tableContainer.appendChild(table);
-
-      // Summary
-      var certCount = users.filter(function (u) { return u.certified; }).length;
-      var legend = el('p', { className: 'history-count', style: { marginTop: '12px' } },
-        certCount + ' of ' + users.length + ' certified  |  \u2705 Pass  |  \u274C Fail  |  \u25A1 Not Attempted  |  Highlighted = Test Out'
-      );
-      tableContainer.appendChild(legend);
+      rebuildCertTable();
     });
   }
 

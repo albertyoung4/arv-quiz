@@ -2357,6 +2357,109 @@ body {
   margin-top: 2px;
 }
 
+/* Certification Name Filter */
+.cert-filter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.cert-filter-label {
+  font-weight: 600;
+  font-size: .9rem;
+  white-space: nowrap;
+}
+.cert-filter-box {
+  position: relative;
+  min-width: 200px;
+}
+.cert-filter-toggle {
+  width: 100%;
+  padding: 8px 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  font-size: .88rem;
+  cursor: pointer;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: border-color .15s;
+}
+.cert-filter-toggle:hover,
+.cert-filter-toggle-open {
+  border-color: var(--primary);
+}
+.cert-filter-arrow {
+  font-size: .7rem;
+  margin-left: 8px;
+  transition: transform .15s;
+}
+.cert-filter-toggle-open .cert-filter-arrow {
+  transform: rotate(180deg);
+}
+.cert-filter-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1.5px solid #d1d5db;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  z-index: 50;
+  max-height: 260px;
+  overflow: hidden;
+  flex-direction: column;
+}
+.cert-filter-dropdown-open {
+  display: flex;
+}
+.cert-filter-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 6px;
+  border-bottom: 1px solid #e5e7eb;
+}
+.cert-filter-action-btn {
+  font-size: .78rem;
+  padding: 3px 10px;
+  border-radius: 5px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background .12s;
+}
+.cert-filter-action-btn:hover {
+  background: #e5e7eb;
+}
+.cert-filter-list {
+  overflow-y: auto;
+  max-height: 210px;
+  padding: 4px 0;
+}
+.cert-filter-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: .87rem;
+  transition: background .1s;
+}
+.cert-filter-item:hover {
+  background: #f3f4f6;
+}
+.cert-filter-item input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
 /* ========================================
    Leaderboard Screen
    ======================================== */
