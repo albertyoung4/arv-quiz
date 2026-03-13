@@ -2325,6 +2325,39 @@ body {
 }
 
 /* ========================================
+   Certification Status Screen
+   ======================================== */
+.cert-row {
+  grid-template-columns: 1.3fr .55fr .55fr .55fr .55fr .55fr .55fr .55fr .55fr .55fr .65fr;
+}
+.cert-table-container {
+  overflow-x: auto;
+}
+.cert-testout {
+  background: rgba(251, 191, 36, .10);
+}
+.cert-header .cert-testout {
+  background: rgba(251, 191, 36, .22);
+  color: #92400e;
+}
+.cert-certified {
+  background: rgba(251, 191, 36, .13);
+}
+.cert-certified .cert-testout {
+  background: rgba(251, 191, 36, .22);
+}
+.cert-testout-label {
+  display: block;
+  font-size: .6rem;
+  font-weight: 600;
+  color: #b45309;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* ========================================
    Leaderboard Screen
    ======================================== */
 .leaderboard-header {

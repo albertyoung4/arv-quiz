@@ -1213,6 +1213,12 @@
       }, '\uD83D\uDCCA History');
       nav.appendChild(histBtn);
 
+      var certBtn = el('button', {
+        className: 'nav-trigger' + (activeSection === 'certification' ? ' nav-trigger-active' : ''),
+        onClick: function () { closeAllDropdowns(); closeMobileNav(); renderCertificationStatus(); }
+      }, '\uD83C\uDF93 Certification');
+      nav.appendChild(certBtn);
+
       var lbBtn = el('button', {
         className: 'nav-trigger' + (activeSection === 'leaderboard' ? ' nav-trigger-active' : ''),
         onClick: function () { closeAllDropdowns(); closeMobileNav(); renderLeaderboard(); }
@@ -1236,6 +1242,10 @@
           className: 'mobile-nav-direct-btn' + (activeSection === 'history' ? ' mobile-nav-trigger-active' : ''),
           onClick: function () { closeMobileNav(); renderHistory(); }
         }, '\uD83D\uDCCA History'));
+        mobilePanel.appendChild(el('button', {
+          className: 'mobile-nav-direct-btn' + (activeSection === 'certification' ? ' mobile-nav-trigger-active' : ''),
+          onClick: function () { closeMobileNav(); renderCertificationStatus(); }
+        }, '\uD83C\uDF93 Certification'));
         mobilePanel.appendChild(el('button', {
           className: 'mobile-nav-direct-btn' + (activeSection === 'leaderboard' ? ' mobile-nav-trigger-active' : ''),
           onClick: function () { closeMobileNav(); renderLeaderboard(); }
@@ -2799,8 +2809,12 @@
     var info = LEVELS[Math.min(level, LEVELS.length - 1)];
     var grades = getModuleGrades();
 
-    // Check if all complete
-    if (level >= MODULES_COUNT) {
+    // Check if test out modules (5-8 = indices 4-7) are all passed
+    var TESTOUT_INDICES = [4, 5, 6, 7];
+    var testOutPassed = TESTOUT_INDICES.every(function (idx) {
+      return completed.indexOf(idx) !== -1;
+    });
+    if (testOutPassed) {
       renderDiploma();
       return;
     }
@@ -3642,7 +3656,7 @@
         el('div', { className: 'diploma-divider' }),
         el('p', { className: 'diploma-awarded' }, 'This certifies that'),
         el('h2', { className: 'diploma-name' }, name),
-        el('p', { className: 'diploma-achievement' }, 'has successfully completed all ' + MODULES_COUNT + ' modules of the'),
+        el('p', { className: 'diploma-achievement' }, 'has successfully passed the Test Out modules of the'),
         el('h3', { className: 'diploma-program' }, 'ARV Mastery Training Program'),
         el('p', { className: 'diploma-subtitle' }, 'and is hereby recognized as a'),
         el('div', { className: 'diploma-badge' }, '\uD83C\uDF93'),
@@ -3760,6 +3774,323 @@
 
       tableContainer.appendChild(table);
       tableContainer.appendChild(el('p', { className: 'history-count' }, rows.length + ' attempt' + (rows.length !== 1 ? 's' : '') + ' total'));
+    });
+  }
+
+  // ---------------------------------------------------------------------------
+  // User Variance Chart (modal)
+  // ---------------------------------------------------------------------------
+
+  function showUserVarianceChart(user, allRows) {
+    // Filter rows for this user, only Module 1-8
+    var email = user.email.toLowerCase().trim();
+    var moduleNames = ['Module 1','Module 2','Module 3','Module 4','Module 5','Module 6','Module 7','Module 8'];
+    var moduleData = {};
+    moduleNames.forEach(function (m) { moduleData[m] = { arvPcts: [], renoPcts: [] }; });
+
+    allRows.forEach(function (row) {
+      var rowEmail = (row.Email || '').toLowerCase().trim();
+      if (rowEmail !== email) return;
+      var mod = row.Module || '';
+      if (moduleNames.indexOf(mod) === -1) return;
+      var arvPct = parseFloat(row['Avg ARV % Off']);
+      var renoPct = parseFloat(row['Avg Reno % Off']);
+      if (!isNaN(arvPct)) moduleData[mod].arvPcts.push(arvPct);
+      if (!isNaN(renoPct)) moduleData[mod].renoPcts.push(renoPct);
+    });
+
+    // Build best (lowest) variance per module for trend
+    var arvBest = [];
+    var renoBest = [];
+    var labels = [];
+    moduleNames.forEach(function (m) {
+      var d = moduleData[m];
+      labels.push(m.replace('Module ', 'M'));
+      arvBest.push(d.arvPcts.length > 0 ? Math.min.apply(null, d.arvPcts) : null);
+      renoBest.push(d.renoPcts.length > 0 ? Math.min.apply(null, d.renoPcts) : null);
+    });
+
+    // Find max value for chart scaling
+    var allVals = arvBest.concat(renoBest).filter(function (v) { return v !== null; });
+    var maxVal = allVals.length > 0 ? Math.max.apply(null, allVals) : 50;
+    maxVal = Math.max(maxVal, 10); // min scale
+    maxVal = Math.ceil(maxVal / 5) * 5; // round up to nearest 5
+
+    // Create modal overlay
+    var overlay = el('div', {
+      style: {
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        background: 'rgba(0,0,0,.5)', zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '1rem'
+      }
+    });
+    overlay.onclick = function (e) { if (e.target === overlay) overlay.remove(); };
+
+    var modal = el('div', {
+      style: {
+        background: '#fff', borderRadius: '12px', padding: '1.5rem',
+        maxWidth: '700px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
+        boxShadow: '0 20px 60px rgba(0,0,0,.3)'
+      }
+    });
+
+    // Header
+    modal.appendChild(el('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' } },
+      el('h2', { style: { margin: 0, fontSize: '1.2rem' } }, '\uD83D\uDCC8 ' + user.displayName + ' \u2014 Variance Trend'),
+      el('button', {
+        style: { background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888' },
+        onClick: function () { overlay.remove(); }
+      }, '\u2715')
+    ));
+    modal.appendChild(el('p', { style: { color: '#888', fontSize: '.85rem', marginBottom: '1rem' } },
+      'Best (lowest) % off per module. Lower = better accuracy. Trend should go down as they improve.'
+    ));
+
+    // Draw chart using canvas
+    var chartH = 260;
+    var chartW = 620;
+    var canvas = el('canvas', { width: chartW * 2, height: chartH * 2, style: { width: chartW + 'px', height: chartH + 'px', display: 'block', margin: '0 auto' } });
+    modal.appendChild(canvas);
+
+    var ctx = canvas.getContext('2d');
+    ctx.scale(2, 2); // retina
+    var padL = 45, padR = 15, padT = 20, padB = 40;
+    var gW = chartW - padL - padR;
+    var gH = chartH - padT - padB;
+    var cols = labels.length;
+    var colW = gW / cols;
+
+    // Grid lines
+    ctx.strokeStyle = '#e5e7eb';
+    ctx.lineWidth = 0.5;
+    var gridSteps = 5;
+    for (var g = 0; g <= gridSteps; g++) {
+      var gy = padT + (gH / gridSteps) * g;
+      ctx.beginPath(); ctx.moveTo(padL, gy); ctx.lineTo(padL + gW, gy); ctx.stroke();
+      ctx.fillStyle = '#9ca3af'; ctx.font = '10px sans-serif'; ctx.textAlign = 'right';
+      ctx.fillText((maxVal - (maxVal / gridSteps) * g).toFixed(0) + '%', padL - 5, gy + 3);
+    }
+
+    // X labels
+    ctx.fillStyle = '#6b7280'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center';
+    labels.forEach(function (l, i) {
+      ctx.fillText(l, padL + colW * i + colW / 2, chartH - 8);
+    });
+
+    // Test Out background band
+    ctx.fillStyle = 'rgba(251,191,36,.08)';
+    ctx.fillRect(padL + colW * 4, padT, colW * 4, gH);
+    ctx.fillStyle = '#b45309'; ctx.font = 'bold 9px sans-serif';
+    ctx.fillText('TEST OUT', padL + colW * 6, padT + 12);
+
+    // Helper to draw a line series
+    function drawLine(values, color) {
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      var started = false;
+      values.forEach(function (v, i) {
+        if (v === null) { started = false; return; }
+        var x = padL + colW * i + colW / 2;
+        var y = padT + gH - (v / maxVal) * gH;
+        if (!started) { ctx.moveTo(x, y); started = true; }
+        else { ctx.lineTo(x, y); }
+      });
+      ctx.stroke();
+
+      // Dots
+      values.forEach(function (v, i) {
+        if (v === null) return;
+        var x = padL + colW * i + colW / 2;
+        var y = padT + gH - (v / maxVal) * gH;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = color;
+        ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+        // Value label
+        ctx.fillStyle = color; ctx.font = 'bold 10px sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText(v.toFixed(1) + '%', x, y - 9);
+      });
+    }
+
+    drawLine(arvBest, '#3b82f6');  // blue for ARV
+    drawLine(renoBest, '#f97316'); // orange for Reno
+
+    // Legend
+    var legend = el('div', { style: { display: 'flex', justifyContent: 'center', gap: '1.5rem', marginTop: '.75rem', fontSize: '.85rem' } });
+    legend.appendChild(el('span', null,
+      el('span', { style: { display: 'inline-block', width: '14px', height: '3px', background: '#3b82f6', borderRadius: '2px', marginRight: '6px', verticalAlign: 'middle' } }),
+      ' ARV % Off (best attempt)'
+    ));
+    legend.appendChild(el('span', null,
+      el('span', { style: { display: 'inline-block', width: '14px', height: '3px', background: '#f97316', borderRadius: '2px', marginRight: '6px', verticalAlign: 'middle' } }),
+      ' Reno % Off (best attempt)'
+    ));
+    modal.appendChild(legend);
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen: Certification Status
+  // ---------------------------------------------------------------------------
+
+  function renderCertificationStatus() {
+    activeSection = 'certification';
+    renderNav();
+    var app = clearApp();
+
+    var screen = el('div', { className: 'screen history-screen' });
+
+    screen.appendChild(el('h1', null, '\uD83C\uDF93 ARV Training \u2014 Certification Status'));
+    screen.appendChild(el('p', { className: 'history-subtitle' }, 'Pass all four Test Out modules (5\u20138) to earn certification. If passed at least once = Pass.'));
+
+    var tableContainer = el('div', { className: 'history-table-container cert-table-container' });
+    tableContainer.appendChild(el('div', { className: 'loading-spinner' }));
+    tableContainer.appendChild(el('p', { style: { textAlign: 'center', color: '#888' } }, 'Loading certification data...'));
+    screen.appendChild(tableContainer);
+
+    var btnRow = el('div', { className: 'btn-row' });
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderDashboard
+    }, '\u2190 Back to Dashboard'));
+    btnRow.appendChild(el('button', {
+      className: 'btn-secondary',
+      onClick: renderLeaderboard
+    }, '\uD83C\uDFC6 View Leaderboard'));
+    screen.appendChild(btnRow);
+
+    app.appendChild(screen);
+
+    // All tracked modules: Intro + Module 1-8
+    var ALL_MODULES = [
+      { key: 'Intro: Comp Analysis', label: 'Intro', testOut: false },
+      { key: 'Module 1', label: 'M1', testOut: false },
+      { key: 'Module 2', label: 'M2', testOut: false },
+      { key: 'Module 3', label: 'M3', testOut: false },
+      { key: 'Module 4', label: 'M4', testOut: false },
+      { key: 'Module 5', label: 'M5', testOut: true },
+      { key: 'Module 6', label: 'M6', testOut: true },
+      { key: 'Module 7', label: 'M7', testOut: true },
+      { key: 'Module 8', label: 'M8', testOut: true }
+    ];
+    var TESTOUT_KEYS = ALL_MODULES.filter(function (m) { return m.testOut; }).map(function (m) { return m.key; });
+    var ALL_KEYS = ALL_MODULES.map(function (m) { return m.key; });
+
+    // Fetch data and compute certification
+    fetchHistory(function (data) {
+      tableContainer.innerHTML = '';
+      if (!data || !data.rows || data.rows.length === 0) {
+        tableContainer.appendChild(el('div', { className: 'history-empty' },
+          el('p', null, '\uD83D\uDCED No attempts logged yet.'),
+          el('p', { className: 'history-empty-sub' }, 'Complete modules to see certification status.')
+        ));
+        return;
+      }
+
+      // Build per-user, per-module pass map
+      var userMap = {};
+
+      data.rows.forEach(function (row) {
+        var email = (row.Email || '').toLowerCase().trim();
+        var mod = row.Module || '';
+        if (!email || ALL_KEYS.indexOf(mod) === -1) return;
+
+        if (!userMap[email]) {
+          userMap[email] = { email: row.Email, modules: {} };
+          ALL_KEYS.forEach(function (k) { userMap[email].modules[k] = { attempted: false, passed: false }; });
+        }
+        var u = userMap[email];
+        u.modules[mod].attempted = true;
+        if (row.Result === 'Pass') u.modules[mod].passed = true;
+      });
+
+      // Convert to sorted array
+      var users = [];
+      for (var email in userMap) {
+        var u = userMap[email];
+        var certified = true;
+        TESTOUT_KEYS.forEach(function (k) {
+          if (!u.modules[k].passed) certified = false;
+        });
+        u.certified = certified;
+        var name = u.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
+        u.displayName = name;
+        users.push(u);
+      }
+      // Sort: certified first, then alphabetical
+      users.sort(function (a, b) {
+        if (a.certified !== b.certified) return a.certified ? -1 : 1;
+        return a.displayName.localeCompare(b.displayName);
+      });
+
+      if (users.length === 0) {
+        tableContainer.appendChild(el('div', { className: 'history-empty' },
+          el('p', null, '\uD83D\uDCED No attempts yet.')
+        ));
+        return;
+      }
+
+      var table = el('div', { className: 'history-table' });
+
+      // Header
+      var header = el('div', { className: 'history-row history-header cert-row cert-header' });
+      header.appendChild(el('div', { className: 'history-cell' }, 'Name'));
+      ALL_MODULES.forEach(function (m) {
+        var cell = el('div', { className: 'history-cell' + (m.testOut ? ' cert-testout' : '') });
+        cell.appendChild(document.createTextNode(m.label));
+        if (m.testOut) {
+          cell.appendChild(el('span', { className: 'cert-testout-label' }, 'Test Out'));
+        }
+        header.appendChild(cell);
+      });
+      header.appendChild(el('div', { className: 'history-cell' }, 'Status'));
+      table.appendChild(header);
+
+      // Rows
+      users.forEach(function (u) {
+        var tr = el('div', { className: 'history-row cert-row' + (u.certified ? ' cert-certified' : '') });
+        var nameCell = el('div', { className: 'history-cell', style: { fontWeight: '600', cursor: 'pointer', textDecoration: 'underline', color: 'var(--primary)' } }, u.displayName);
+        nameCell.onclick = (function (user, rows) { return function () { showUserVarianceChart(user, rows); }; })(u, data.rows);
+        tr.appendChild(nameCell);
+
+        ALL_MODULES.forEach(function (m) {
+          var mod = u.modules[m.key];
+          var cellText, cellClass;
+          if (mod.passed) {
+            cellText = '\u2705';
+            cellClass = 'history-cell text-good';
+          } else if (mod.attempted) {
+            cellText = '\u274C';
+            cellClass = 'history-cell text-bad';
+          } else {
+            cellText = '\u25A1';
+            cellClass = 'history-cell';
+          }
+          if (m.testOut) cellClass += ' cert-testout';
+          tr.appendChild(el('div', { className: cellClass }, cellText));
+        });
+
+        var certCell = u.certified
+          ? el('div', { className: 'history-cell text-good', style: { fontWeight: '700' } }, '\u2705 YES')
+          : el('div', { className: 'history-cell text-bad', style: { fontWeight: '700' } }, '\u274C NO');
+        tr.appendChild(certCell);
+
+        table.appendChild(tr);
+      });
+
+      tableContainer.appendChild(table);
+
+      // Summary
+      var certCount = users.filter(function (u) { return u.certified; }).length;
+      var legend = el('p', { className: 'history-count', style: { marginTop: '12px' } },
+        certCount + ' of ' + users.length + ' certified  |  \u2705 Pass  |  \u274C Fail  |  \u25A1 Not Attempted  |  Highlighted = Test Out'
+      );
+      tableContainer.appendChild(legend);
     });
   }
 
