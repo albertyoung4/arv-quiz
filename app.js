@@ -4018,13 +4018,14 @@
           if (!u.modules[k].passed) certified = false;
         });
         u.certified = certified;
+        u.passedCount = ALL_KEYS.reduce(function (n, k) { return n + (u.modules[k].passed ? 1 : 0); }, 0);
         var name = u.email.split('@')[0].replace(/[._]/g, ' ').replace(/\b\w/g, function (l) { return l.toUpperCase(); });
         u.displayName = name;
         users.push(u);
       }
-      // Sort: certified first, then alphabetical
+      // Sort: most modules completed first, then alphabetical
       users.sort(function (a, b) {
-        if (a.certified !== b.certified) return a.certified ? -1 : 1;
+        if (a.passedCount !== b.passedCount) return b.passedCount - a.passedCount;
         return a.displayName.localeCompare(b.displayName);
       });
 
