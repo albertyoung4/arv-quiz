@@ -148,6 +148,11 @@
       items: [
         { id: 'materials-library', label: 'Video Library', handler: 'renderMaterials' },
       ]
+    },
+    { id: 'performance', label: 'Performance', icon: '\uD83D\uDCCA',
+      items: [
+        { id: 'acq-performance', label: 'Acq Team Weekly', handler: 'renderPerformance' },
+      ]
     }
   ];
 
@@ -1099,6 +1104,7 @@
       'bootSalesLevel2': bootSalesLevel2,
       'bootSalesLevel3': bootSalesLevel3,
       'renderMaterials': renderMaterials,
+      'renderPerformance': renderPerformance,
     };
 
     if (handlers[handlerName]) {
@@ -4295,6 +4301,189 @@
 
       tableContainer.appendChild(table);
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Performance Dashboard
+  // ---------------------------------------------------------------------------
+
+  function renderPerformance() {
+    var app = document.getElementById('app');
+    app.innerHTML = '<div class="perf-loading">Loading performance data...</div>';
+
+    fetch('performance-data.json?v=' + Date.now())
+      .then(function(r) { return r.json(); })
+      .then(function(data) { renderPerformanceDashboard(data); })
+      .catch(function() {
+        app.innerHTML = '<div class="perf-loading">Performance data not available yet.</div>';
+      });
+  }
+
+  function renderPerformanceDashboard(data) {
+    var app = document.getElementById('app');
+    var agents = data.agents;
+    var weeks = data.weeks || [];
+
+    // MPS level to CSS class
+    function mpsClass(level) {
+      return 'mps-' + level.toLowerCase().replace(/\s+/g, '-');
+    }
+
+    // Trend arrow
+    function trendIcon(t) {
+      if (t === 'up') return '<span class="trend-up" title="Improving">\u2191</span>';
+      if (t === 'down') return '<span class="trend-down" title="Declining">\u2193</span>';
+      return '<span class="trend-flat" title="Flat">\u2192</span>';
+    }
+
+    // Sort controls state
+    var sortCol = 'contracts';
+    var sortDir = 'desc';
+
+    function sortAgents(col) {
+      if (sortCol === col) {
+        sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        sortCol = col;
+        sortDir = 'desc';
+      }
+      renderTable();
+    }
+
+    function getSortValue(agent) {
+      var map = {
+        'agent': agent.agent,
+        'contracts': agent.lastWeek.contracts,
+        'marketed': agent.lastWeek.marketed,
+        'positiveSpread': agent.lastWeek.positiveSpread,
+        'assignments': agent.lastWeek.assignments,
+        'avgContracts': agent.fourWeekAvg.contracts,
+      };
+      return map[sortCol] !== undefined ? map[sortCol] : 0;
+    }
+
+    function renderTable() {
+      var sorted = agents.slice().sort(function(a, b) {
+        var va = getSortValue(a);
+        var vb = getSortValue(b);
+        if (typeof va === 'string') {
+          return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+        }
+        return sortDir === 'asc' ? va - vb : vb - va;
+      });
+
+      var arrow = sortDir === 'desc' ? ' \u25BC' : ' \u25B2';
+
+      var html = '';
+      html += '<div class="perf-container">';
+      html += '<div class="perf-header">';
+      html += '<h1>Acquisition Team Performance</h1>';
+      html += '<p class="perf-subtitle">Week of ' + data.weekStart + ' to ' + data.weekEnd + '</p>';
+      html += '<p class="perf-generated">Updated: ' + data.generated.replace('T', ' ') + '</p>';
+      html += '</div>';
+
+      // MPS legend
+      html += '<div class="perf-legend">';
+      html += '<span class="mps-badge mps-expert">Expert</span>';
+      html += '<span class="mps-badge mps-target">Target</span>';
+      html += '<span class="mps-badge mps-minimum">Minimum</span>';
+      html += '<span class="mps-badge mps-below-minimum">Below Min</span>';
+      html += '<span class="perf-legend-spacer"></span>';
+      html += '<span class="perf-legend-label">MPS: Contracts \u22651/wk | Marketed \u22651/wk | Pos. Spread \u22650.5/wk | Assignments \u22650.5/wk</span>';
+      html += '</div>';
+
+      // Main table
+      html += '<div class="perf-table-wrap">';
+      html += '<table class="perf-table">';
+      html += '<thead><tr>';
+
+      var cols = [
+        { key: 'agent', label: 'Agent' },
+        { key: 'contracts', label: 'Contracts' },
+        { key: 'marketed', label: 'Marketed' },
+        { key: 'positiveSpread', label: 'Pos. Spread' },
+        { key: 'assignments', label: 'Assignments' },
+        { key: 'avgContracts', label: '4-Wk Avg' },
+      ];
+
+      // Add weekly columns
+      for (var w = 0; w < weeks.length; w++) {
+        cols.push({ key: 'week_' + w, label: weeks[w] });
+      }
+      cols.push({ key: 'trend', label: 'Trend', noSort: true });
+
+      for (var c = 0; c < cols.length; c++) {
+        var col = cols[c];
+        var sortable = !col.noSort;
+        var cls = sortable ? 'perf-sortable' : '';
+        var arrowStr = sortCol === col.key ? arrow : '';
+        html += '<th class="' + cls + '" data-col="' + col.key + '">' + col.label + arrowStr + '</th>';
+      }
+      html += '</tr></thead><tbody>';
+
+      for (var i = 0; i < sorted.length; i++) {
+        var a = sorted[i];
+        var lw = a.lastWeek;
+        var mps = a.mpsLevel;
+        var hasActivity = lw.contracts > 0 || lw.marketed > 0 || lw.assignments > 0;
+        var rowClass = hasActivity ? '' : 'perf-inactive-row';
+
+        html += '<tr class="' + rowClass + '">';
+        html += '<td class="perf-agent-name">' + a.agent + '</td>';
+        html += '<td class="' + mpsClass(mps.contracts) + '">' + lw.contracts + '</td>';
+        html += '<td class="' + mpsClass(mps.marketed) + '">' + lw.marketed + '</td>';
+        html += '<td class="' + mpsClass(mps.positiveSpread) + '">' + lw.positiveSpread + '</td>';
+        html += '<td class="' + mpsClass(mps.assignments) + '">' + lw.assignments + '</td>';
+        html += '<td>' + a.fourWeekAvg.contracts + '</td>';
+
+        // Weekly contract history
+        for (var wi = 0; wi < weeks.length; wi++) {
+          var wval = (a.weeklyContracts && a.weeklyContracts[weeks[wi]]) || 0;
+          html += '<td class="perf-week-cell">' + wval + '</td>';
+        }
+
+        html += '<td>' + trendIcon(a.trend) + '</td>';
+        html += '</tr>';
+      }
+
+      html += '</tbody></table></div>';
+
+      // Summary stats
+      var totalContracts = 0, totalMarketed = 0, belowMin = 0, activeCount = 0;
+      for (var j = 0; j < agents.length; j++) {
+        totalContracts += agents[j].lastWeek.contracts;
+        totalMarketed += agents[j].lastWeek.marketed;
+        if (agents[j].lastWeek.contracts > 0 || agents[j].lastWeek.marketed > 0) activeCount++;
+        var levels = agents[j].mpsLevel;
+        if (levels.contracts === 'Below Minimum' || levels.marketed === 'Below Minimum' ||
+            levels.positiveSpread === 'Below Minimum' || levels.assignments === 'Below Minimum') {
+          belowMin++;
+        }
+      }
+
+      html += '<div class="perf-stats">';
+      html += '<div class="perf-stat"><span class="perf-stat-value">' + totalContracts + '</span><span class="perf-stat-label">Total Contracts</span></div>';
+      html += '<div class="perf-stat"><span class="perf-stat-value">' + totalMarketed + '</span><span class="perf-stat-label">Total Marketed</span></div>';
+      html += '<div class="perf-stat"><span class="perf-stat-value">' + activeCount + '</span><span class="perf-stat-label">Active Agents</span></div>';
+      html += '<div class="perf-stat perf-stat-alert"><span class="perf-stat-value">' + belowMin + '</span><span class="perf-stat-label">Below Minimum</span></div>';
+      html += '</div>';
+
+      html += '</div>';
+
+      app.innerHTML = html;
+
+      // Bind sort handlers
+      var ths = app.querySelectorAll('.perf-sortable');
+      for (var t = 0; t < ths.length; t++) {
+        (function(th) {
+          th.addEventListener('click', function() {
+            sortAgents(th.getAttribute('data-col'));
+          });
+        })(ths[t]);
+      }
+    }
+
+    renderTable();
   }
 
   // ---------------------------------------------------------------------------

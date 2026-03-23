@@ -1,0 +1,881 @@
+{
+  "generated": "2026-03-23T12:18:26",
+  "weekStart": "2026-03-16",
+  "weekEnd": "2026-03-22",
+  "weeks": [
+    "2026-02-23",
+    "2026-03-02",
+    "2026-03-09",
+    "2026-03-16"
+  ],
+  "agents": [
+    {
+      "agent": "Devin Buford",
+      "lastWeek": {
+        "contracts": 5,
+        "marketed": 1,
+        "positiveSpread": 0,
+        "assignments": 3
+      },
+      "fourWeekAvg": {
+        "contracts": 4.2,
+        "marketed": 2.8,
+        "positiveSpread": 1.5,
+        "assignments": 1.5
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Expert"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 5,
+        "2026-03-02": 6,
+        "2026-03-09": 1,
+        "2026-03-16": 5
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Shon Yoshida",
+      "lastWeek": {
+        "contracts": 5,
+        "marketed": 3,
+        "positiveSpread": 2,
+        "assignments": 3
+      },
+      "fourWeekAvg": {
+        "contracts": 5.0,
+        "marketed": 3.0,
+        "positiveSpread": 2.2,
+        "assignments": 1.5
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Expert",
+        "positiveSpread": "Expert",
+        "assignments": "Expert"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 6,
+        "2026-03-02": 4,
+        "2026-03-09": 5,
+        "2026-03-16": 5
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Debran Collins",
+      "lastWeek": {
+        "contracts": 4,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 1.8,
+        "marketed": 0.2,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 1,
+        "2026-03-09": 2,
+        "2026-03-16": 4
+      },
+      "trend": "up"
+    },
+    {
+      "agent": "Ian Ross",
+      "lastWeek": {
+        "contracts": 3,
+        "marketed": 3,
+        "positiveSpread": 3,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 1.8,
+        "marketed": 2.0,
+        "positiveSpread": 1.0,
+        "assignments": 0.5
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Expert",
+        "positiveSpread": "Expert",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 2,
+        "2026-03-02": 1,
+        "2026-03-09": 1,
+        "2026-03-16": 3
+      },
+      "trend": "up"
+    },
+    {
+      "agent": "Kyle Singer",
+      "lastWeek": {
+        "contracts": 3,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 2.8,
+        "marketed": 1.5,
+        "positiveSpread": 1.0,
+        "assignments": 1.2
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 4,
+        "2026-03-02": 2,
+        "2026-03-09": 2,
+        "2026-03-16": 3
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Luis Guzman",
+      "lastWeek": {
+        "contracts": 3,
+        "marketed": 4,
+        "positiveSpread": 2,
+        "assignments": 2
+      },
+      "fourWeekAvg": {
+        "contracts": 4.0,
+        "marketed": 3.0,
+        "positiveSpread": 1.2,
+        "assignments": 1.2
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Expert",
+        "positiveSpread": "Expert",
+        "assignments": "Expert"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 3,
+        "2026-03-02": 4,
+        "2026-03-09": 6,
+        "2026-03-16": 3
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Tamara Humbolt",
+      "lastWeek": {
+        "contracts": 3,
+        "marketed": 4,
+        "positiveSpread": 2,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 5.0,
+        "marketed": 2.8,
+        "positiveSpread": 1.2,
+        "assignments": 0.5
+      },
+      "mpsLevel": {
+        "contracts": "Expert",
+        "marketed": "Expert",
+        "positiveSpread": "Expert",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 7,
+        "2026-03-02": 4,
+        "2026-03-09": 6,
+        "2026-03-16": 3
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Garrett Paschal",
+      "lastWeek": {
+        "contracts": 2,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 2.2,
+        "marketed": 1.5,
+        "positiveSpread": 0.8,
+        "assignments": 0.8
+      },
+      "mpsLevel": {
+        "contracts": "Target",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 3,
+        "2026-03-02": 3,
+        "2026-03-09": 1,
+        "2026-03-16": 2
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Michael Purcell",
+      "lastWeek": {
+        "contracts": 2,
+        "marketed": 1,
+        "positiveSpread": 1,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 1.2,
+        "marketed": 1.0,
+        "positiveSpread": 0.8,
+        "assignments": 0.5
+      },
+      "mpsLevel": {
+        "contracts": "Target",
+        "marketed": "Minimum",
+        "positiveSpread": "Target",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 1,
+        "2026-03-09": 2,
+        "2026-03-16": 2
+      },
+      "trend": "up"
+    },
+    {
+      "agent": "Scott Darling",
+      "lastWeek": {
+        "contracts": 2,
+        "marketed": 1,
+        "positiveSpread": 0,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 2.5,
+        "marketed": 1.0,
+        "positiveSpread": 0.2,
+        "assignments": 0.2
+      },
+      "mpsLevel": {
+        "contracts": "Target",
+        "marketed": "Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 2,
+        "2026-03-02": 1,
+        "2026-03-09": 5,
+        "2026-03-16": 2
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Brad Ault",
+      "lastWeek": {
+        "contracts": 1,
+        "marketed": 1,
+        "positiveSpread": 1,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 2.0,
+        "marketed": 0.8,
+        "positiveSpread": 0.5,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Minimum",
+        "marketed": "Minimum",
+        "positiveSpread": "Target",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 2,
+        "2026-03-02": 5,
+        "2026-03-09": 0,
+        "2026-03-16": 1
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Chris Chambers",
+      "lastWeek": {
+        "contracts": 1,
+        "marketed": 5,
+        "positiveSpread": 3,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 2.5,
+        "marketed": 2.5,
+        "positiveSpread": 1.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Minimum",
+        "marketed": "Expert",
+        "positiveSpread": "Expert",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 4,
+        "2026-03-02": 3,
+        "2026-03-09": 2,
+        "2026-03-16": 1
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Chris Roberts",
+      "lastWeek": {
+        "contracts": 1,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.8,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 2,
+        "2026-03-16": 1
+      },
+      "trend": "up"
+    },
+    {
+      "agent": "EJ Colclough",
+      "lastWeek": {
+        "contracts": 1,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.2,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 1
+      },
+      "trend": "up"
+    },
+    {
+      "agent": "Warren Smith",
+      "lastWeek": {
+        "contracts": 1,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 3.5,
+        "marketed": 1.2,
+        "positiveSpread": 0.0,
+        "assignments": 0.5
+      },
+      "mpsLevel": {
+        "contracts": "Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 3,
+        "2026-03-02": 9,
+        "2026-03-09": 1,
+        "2026-03-16": 1
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Andrew Caceres",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 0.2,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.2
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 1,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Ben Lauria",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Chasity Clark",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 1.0,
+        "marketed": 1.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 3,
+        "2026-03-02": 1,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Chloe Rodman",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Eric Loya",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Gerardo Macias",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.8,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 1,
+        "2026-03-09": 2,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Grant Price",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 1,
+        "positiveSpread": 0,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 1.5,
+        "marketed": 2.2,
+        "positiveSpread": 1.0,
+        "assignments": 1.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 2,
+        "2026-03-02": 1,
+        "2026-03-09": 3,
+        "2026-03-16": 0
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Jeffrey Linn",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Jesse Sychowski",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 3
+      },
+      "fourWeekAvg": {
+        "contracts": 1.5,
+        "marketed": 1.0,
+        "positiveSpread": 0.5,
+        "assignments": 1.2
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Expert"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 3,
+        "2026-03-02": 3,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Kevin Scott",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.2,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 1,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Selena Ziman",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.2,
+        "positiveSpread": 0.2,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Tanner Orman",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.2,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 1,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Tivia McNeill",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.5,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 1,
+        "2026-03-02": 0,
+        "2026-03-09": 1,
+        "2026-03-16": 0
+      },
+      "trend": "down"
+    },
+    {
+      "agent": "Tivia Mcneill",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.2,
+        "positiveSpread": 0.2,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Tony Riska",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 1,
+        "positiveSpread": 0,
+        "assignments": 1
+      },
+      "fourWeekAvg": {
+        "contracts": 0.5,
+        "marketed": 0.5,
+        "positiveSpread": 0.0,
+        "assignments": 0.2
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Target"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 1,
+        "2026-03-09": 1,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    },
+    {
+      "agent": "Zach Brodsky",
+      "lastWeek": {
+        "contracts": 0,
+        "marketed": 0,
+        "positiveSpread": 0,
+        "assignments": 0
+      },
+      "fourWeekAvg": {
+        "contracts": 0.0,
+        "marketed": 0.0,
+        "positiveSpread": 0.0,
+        "assignments": 0.0
+      },
+      "mpsLevel": {
+        "contracts": "Below Minimum",
+        "marketed": "Below Minimum",
+        "positiveSpread": "Below Minimum",
+        "assignments": "Below Minimum"
+      },
+      "weeklyContracts": {
+        "2026-02-23": 0,
+        "2026-03-02": 0,
+        "2026-03-09": 0,
+        "2026-03-16": 0
+      },
+      "trend": "flat"
+    }
+  ]
+}

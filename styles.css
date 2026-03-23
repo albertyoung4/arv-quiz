@@ -2825,3 +2825,224 @@ body {
 ::-webkit-scrollbar-track { background: var(--gray-100); }
 ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+
+/* ========================================
+   Performance Dashboard
+   ======================================== */
+
+.perf-loading {
+  text-align: center;
+  padding: 4rem 2rem;
+  font-size: 1.125rem;
+  color: var(--gray-500);
+}
+
+.perf-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.perf-header {
+  margin-bottom: 1.5rem;
+}
+.perf-header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  margin: 0 0 .25rem;
+}
+.perf-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin: 0;
+}
+.perf-generated {
+  font-size: .8rem;
+  color: var(--gray-400);
+  margin: .25rem 0 0;
+}
+
+/* Legend */
+.perf-legend {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+  padding: .75rem 1rem;
+  background: var(--gray-50);
+  border-radius: .5rem;
+  border: 1px solid var(--gray-200);
+}
+.perf-legend-spacer {
+  flex: 1;
+}
+.perf-legend-label {
+  font-size: .75rem;
+  color: var(--gray-500);
+}
+
+/* MPS badges */
+.mps-badge {
+  display: inline-block;
+  padding: .2rem .5rem;
+  border-radius: .25rem;
+  font-size: .75rem;
+  font-weight: 600;
+}
+.mps-badge.mps-expert { background: #D9EAD3; color: #38761D; }
+.mps-badge.mps-target { background: #FFF2CC; color: #7F6000; }
+.mps-badge.mps-minimum { background: #FCE5CD; color: #B45309; }
+.mps-badge.mps-below-minimum { background: #F4CCCC; color: #CC0000; }
+
+/* Table */
+.perf-table-wrap {
+  overflow-x: auto;
+  border-radius: .5rem;
+  border: 1px solid var(--gray-200);
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.perf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .875rem;
+}
+.perf-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.perf-table th {
+  background: var(--gray-800);
+  color: #fff;
+  font-weight: 600;
+  font-size: .75rem;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  padding: .6rem .75rem;
+  text-align: center;
+  white-space: nowrap;
+  border-bottom: 2px solid var(--gray-900);
+}
+.perf-table th:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+.perf-sortable {
+  cursor: pointer;
+  user-select: none;
+}
+.perf-sortable:hover {
+  background: var(--gray-700);
+}
+.perf-table td {
+  padding: .5rem .75rem;
+  text-align: center;
+  border-bottom: 1px solid var(--gray-100);
+  white-space: nowrap;
+}
+.perf-table td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+}
+.perf-table tbody tr {
+  background: #fff;
+  transition: background .15s;
+}
+.perf-table tbody tr:nth-child(even) {
+  background: var(--gray-50);
+}
+.perf-table tbody tr:hover {
+  background: var(--primary-light);
+}
+.perf-inactive-row {
+  opacity: .5;
+}
+.perf-agent-name {
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+/* MPS cell coloring */
+.mps-expert {
+  background: #D9EAD3 !important;
+  color: #38761D;
+  font-weight: 700;
+}
+.mps-target {
+  background: #FFF2CC !important;
+  color: #7F6000;
+}
+.mps-minimum {
+  background: #FCE5CD !important;
+  color: #B45309;
+}
+.mps-below-minimum {
+  background: #F4CCCC !important;
+  color: #CC0000;
+  font-weight: 700;
+}
+
+.perf-week-cell {
+  font-size: .8rem;
+  color: var(--gray-600);
+}
+
+/* Trend arrows */
+.trend-up { color: #38761D; font-weight: 700; font-size: 1.1rem; }
+.trend-down { color: #CC0000; font-weight: 700; font-size: 1.1rem; }
+.trend-flat { color: var(--gray-400); font-size: 1.1rem; }
+
+/* Summary stats */
+.perf-stats {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+}
+.perf-stat {
+  flex: 1;
+  min-width: 140px;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: .5rem;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+.perf-stat-value {
+  display: block;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--gray-900);
+}
+.perf-stat-label {
+  display: block;
+  font-size: .8rem;
+  color: var(--gray-500);
+  margin-top: .25rem;
+}
+.perf-stat-alert {
+  border-color: #F4CCCC;
+  background: #FEF2F2;
+}
+.perf-stat-alert .perf-stat-value {
+  color: #CC0000;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .perf-container { padding: 1rem .75rem 3rem; }
+  .perf-header h1 { font-size: 1.25rem; }
+  .perf-legend { flex-direction: column; align-items: flex-start; }
+  .perf-legend-spacer { display: none; }
+  .perf-stats { flex-direction: column; }
+  .perf-table { font-size: .75rem; }
+  .perf-table th, .perf-table td { padding: .4rem .5rem; }
+}
