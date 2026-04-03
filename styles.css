@@ -3083,6 +3083,8 @@ body {
 .prospect-result-row:last-child { border-bottom: none; }
 .prospect-result-header { background: var(--gray-50); font-weight: 600; color: var(--gray-500); font-size: 12px; text-transform: uppercase; }
 .prospect-result-addr { font-weight: 500; }
+.prospect-result-thumb { width: 60px; min-width: 60px; padding: 4px; }
+.prospect-thumb-img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; }
 .prospect-result-row:not(.prospect-result-header):hover { background: #f0f9ff; cursor: pointer; }
 .prospect-view-btn { padding: 4px 12px; font-size: 12px; }
 .prospect-status-badge {

@@ -4564,7 +4564,7 @@
       var pattern = '%' + q + '%';
       sbClient
         .from('prospects')
-        .select('id, status, key_code, address, owner_1_name, owner_2_name, beds, baths, arv, offer_price, acquisition_rep')
+        .select('id, status, key_code, address, owner_1_name, owner_2_name, beds, baths, arv, offer_price, acquisition_rep, attom_id')
         .or('address.ilike.' + pattern + ',owner_1_name.ilike.' + pattern + ',key_code.ilike.' + pattern + ',acquisition_rep.ilike.' + pattern)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -4580,35 +4580,54 @@
             results.innerHTML = '<div class="prospect-empty">No prospects found</div>';
             return;
           }
-          var table = el('div', { className: 'prospect-results-table' });
-          var hdr = el('div', { className: 'prospect-result-row prospect-result-header' });
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Address'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Owner'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Status'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Beds/Baths'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'ARV'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Offer'));
-          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, ''));
-          table.appendChild(hdr);
 
-          data.forEach(function (row) {
-            var tr = el('div', { className: 'prospect-result-row' });
-            tr.appendChild(el('div', { className: 'prospect-result-cell prospect-result-addr' }, row.address || 'N/A'));
-            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.owner_1_name || '-'));
-            tr.appendChild(el('div', { className: 'prospect-result-cell' },
-              el('span', { className: 'prospect-status-badge prospect-status-' + (row.status || 'unknown') }, row.status || '-')
-            ));
-            tr.appendChild(el('div', { className: 'prospect-result-cell' }, (row.beds || 0) + 'bd / ' + (row.baths || 0) + 'ba'));
-            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.arv ? fmtDollars(row.arv) : '-'));
-            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.offer_price ? fmtDollars(row.offer_price) : '-'));
-            var viewBtn = el('button', {
-              className: 'btn-primary prospect-view-btn',
-              onClick: function () { loadProspectDetail(row.id); }
-            }, 'View');
-            tr.appendChild(el('div', { className: 'prospect-result-cell' }, viewBtn));
-            table.appendChild(tr);
+          // Fetch first photo for each prospect
+          var ids = data.map(function (r) { return r.id; });
+          sbClient.from('prospect_photos').select('prospect_id, image_url').in('prospect_id', ids).order('sort_order').then(function (photoRes) {
+            var photoMap = {};
+            (photoRes.data || []).forEach(function (p) {
+              if (!photoMap[p.prospect_id]) photoMap[p.prospect_id] = p.image_url;
+            });
+
+            var table = el('div', { className: 'prospect-results-table' });
+            var hdr = el('div', { className: 'prospect-result-row prospect-result-header' });
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, ''));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Address'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Owner'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Status'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Beds/Baths'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'ARV'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Offer'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, ''));
+            table.appendChild(hdr);
+
+            data.forEach(function (row) {
+              var tr = el('div', { className: 'prospect-result-row' });
+              var thumbCell = el('div', { className: 'prospect-result-cell prospect-result-thumb' });
+              var thumbUrl = photoMap[row.id];
+              if (thumbUrl) {
+                var img = el('img', { src: thumbUrl, className: 'prospect-thumb-img' });
+                img.onerror = function () { this.style.display = 'none'; };
+                thumbCell.appendChild(img);
+              }
+              tr.appendChild(thumbCell);
+              tr.appendChild(el('div', { className: 'prospect-result-cell prospect-result-addr' }, row.address || 'N/A'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.owner_1_name || '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' },
+                el('span', { className: 'prospect-status-badge prospect-status-' + (row.status || 'unknown') }, row.status || '-')
+              ));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, (row.beds || 0) + 'bd / ' + (row.baths || 0) + 'ba'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.arv ? fmtDollars(row.arv) : '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.offer_price ? fmtDollars(row.offer_price) : '-'));
+              var viewBtn = el('button', {
+                className: 'btn-primary prospect-view-btn',
+                onClick: function () { loadProspectDetail(row.id); }
+              }, 'View');
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, viewBtn));
+              table.appendChild(tr);
+            });
+            results.appendChild(table);
           });
-          results.appendChild(table);
         });
     }
 
@@ -5151,30 +5170,50 @@
       generateBtn.textContent = 'Generating...';
       generateBtn.disabled = true;
 
-      var body = { newAcquisitionPrice: newAcq };
-      if (newArvInput.input.value) body.newARV = Number(newArvInput.input.value);
-      if (newRehabInput.input.value) body.newRepairEstimate = Number(newRehabInput.input.value);
+      var newArv = Number(newArvInput.input.value) || currentARV;
+      var priceDiff = currentOffer - newAcq;
+      var newRehab = Number(newRehabInput.input.value) || Math.round(currentRehab + (priceDiff * 1.1222));
+      var pctChange = currentOffer > 0 ? ((newAcq - currentOffer) / currentOffer * 100).toFixed(1) : '0.0';
 
-      fetch('http://localhost:8080/api/retrade-pdf/' + attomId, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      })
-        .then(function (r) {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.blob();
-        })
-        .then(function (blob) {
-          var url = URL.createObjectURL(blob);
-          window.open(url, '_blank');
-          generateBtn.textContent = 'Generate Price Reduction PDF';
-          generateBtn.disabled = false;
-        })
-        .catch(function (err) {
-          alert('Failed to generate PDF: ' + err.message);
-          generateBtn.textContent = 'Generate Price Reduction PDF';
-          generateBtn.disabled = false;
+      // Compute new estimated dispo
+      var newDispo = null;
+      if (newArv > 0) {
+        var bPct = 0.70;
+        var cpmD = {1:-0.15,2:-0.13,3:-0.13,4:-0.11,5:-0.06,6:-0.03,7:-0.03,8:-0.02,9:0.00,10:0.00,11:0.04,12:0.05,13:0.08,14:0.12};
+        var ctPtsD = pricing.county_tier != null ? (cpmD[pricing.county_tier] || 0) : 0;
+        var renoRD = newRehab ? newRehab / newArv : 0;
+        var renoPtsD = (renoRD >= 0 && renoRD < 0.20) ? 0.02 : 0.00;
+        newDispo = Math.round((bPct + ctPtsD + renoPtsD) * newArv - newRehab);
+      }
+
+      // Fetch photos from Supabase for PDF
+      var photoPromise = sbClient
+        ? sbClient.from('prospect_photos').select('image_url').eq('prospect_id', data.prospect.id).order('sort_order').limit(21)
+        : Promise.resolve({ data: [] });
+
+      photoPromise.then(function (photoRes) {
+        var photoUrls = (photoRes.data || []).map(function (p) { return p.image_url; });
+        generateRetradePDF({
+          address: (prop.address || '').toUpperCase(),
+          beds: prop.beds, baths: prop.baths, sqft: prop.sqft, yearBuilt: prop.year_built,
+          houseType: prop.house_type,
+          acqRep: data.contact.acquisition_rep || 'Rebuilt Acquisitions',
+          originalAcq: currentOffer, newAcq: newAcq,
+          originalARV: currentARV, newARV: newArv,
+          originalRehab: currentRehab, newRehab: newRehab,
+          pctChange: pctChange,
+          countyTier: pricing.county_tier,
+          estimatedDispo: newDispo,
+          uwNotes: uw ? uw.notes : null,
+          photoUrls: photoUrls,
         });
+        generateBtn.textContent = 'Generate Price Reduction PDF';
+        generateBtn.disabled = false;
+      }).catch(function (err) {
+        alert('Failed to generate PDF: ' + err.message);
+        generateBtn.textContent = 'Generate Price Reduction PDF';
+        generateBtn.disabled = false;
+      });
     }}, 'Generate Price Reduction PDF');
 
     var cancelBtn = el('button', { className: 'btn-secondary', onClick: function () { overlay.remove(); } }, 'Cancel');
@@ -5187,6 +5226,191 @@
     document.body.appendChild(overlay);
 
     updatePreview();
+  }
+
+  function generateRetradePDF(d) {
+    var jsPDF = window.jspdf.jsPDF;
+    var doc = new jsPDF({ unit: 'pt', format: 'letter' });
+    var PW = 512, LM = 50, DARK = '#1a202c', GRAY = '#718096', BLUE = '#1a365d', ACCENT = '#2b6cb0', GREEN = '#276749', RED = '#c53030';
+    var dateStr = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+    function fmtM(v) { if (v == null || isNaN(v)) return '$0'; var n = Number(v); return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US'); }
+    function fmtMSign(v) { var n = Number(v); return (n > 0 ? '+' : n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US'); }
+
+    // === PAGE 1: COVER ===
+    doc.setFillColor(BLUE); doc.rect(0, 0, 612, 792, 'F');
+    doc.setFontSize(36); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
+    doc.text('Inspection Report', 306, 300, { align: 'center' });
+    doc.setDrawColor('#bee3f8'); doc.setLineWidth(2); doc.line(206, 320, 406, 320);
+    doc.setFontSize(16); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
+    doc.text(d.address, 306, 350, { align: 'center', maxWidth: 500 });
+    doc.setFontSize(12); doc.setTextColor('#a0c4e8'); doc.text(dateStr, 306, 380, { align: 'center' });
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
+    doc.text(d.acqRep, 306, 420, { align: 'center' });
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
+    doc.text('Acquisition Representative', 306, 438, { align: 'center' });
+    doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
+    doc.text('REBUILT', 306, 700, { align: 'center' });
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
+    doc.text('rebuiltllc.com', 306, 716, { align: 'center' });
+
+    // === PAGE 2: SUMMARY ===
+    doc.addPage();
+    doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
+    doc.text('REBUILT', LM, 32);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
+    doc.text('UNDERWRITING SUMMARY  |  PRICE ADJUSTMENT REPORT', 140, 32);
+
+    var y = 70;
+    doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+    doc.text(d.address, LM, y); y += 20;
+    var parts = [];
+    if (d.beds) parts.push(d.beds + ' Beds');
+    if (d.baths) parts.push(d.baths + ' Baths');
+    if (d.sqft) parts.push(Number(d.sqft).toLocaleString() + ' sqft');
+    if (d.yearBuilt) parts.push('Built ' + d.yearBuilt);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
+    doc.text(parts.join('   |   '), LM, y); y += 30;
+
+    // Price adjustment box
+    doc.setFillColor('#f0fff4'); doc.rect(LM, y, PW, 70, 'F');
+    doc.setFillColor(GREEN); doc.rect(LM, y, 4, 70, 'F');
+    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(GREEN);
+    doc.text('PRICE ADJUSTMENT', LM + 16, y + 16);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(DARK);
+    doc.text('Original Offer: ' + fmtM(d.originalAcq), LM + 16, y + 32);
+    doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(GREEN);
+    doc.text('New Adjusted Offer: ' + fmtM(d.newAcq), LM + 16, y + 52);
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
+    doc.text(d.pctChange + '% adjustment', LM + 380, y + 52);
+    y += 90;
+
+    // Summary table
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+    doc.text('Underwriting Summary', LM, y); y += 20;
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor('#a0aec0');
+    doc.text('ITEM', LM, y); doc.text('ORIGINAL', 290, y, { align: 'right' }); doc.text('REVISED', 400, y, { align: 'right' }); doc.text('DIFFERENCE', 520, y, { align: 'right' });
+    y += 6; doc.setDrawColor('#e2e8f0'); doc.setLineWidth(1); doc.line(LM, y, 562, y); y += 14;
+
+    function tblRow(label, orig, revised, bold) {
+      doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(10); doc.setTextColor(DARK);
+      doc.text(label, LM, y); doc.text(fmtM(orig), 290, y, { align: 'right' }); doc.text(fmtM(revised), 400, y, { align: 'right' });
+      var diff = revised - orig;
+      doc.setTextColor(diff < 0 ? RED : diff > 0 ? GREEN : GRAY);
+      doc.text(fmtMSign(diff), 520, y, { align: 'right' });
+      y += 18; doc.setDrawColor('#f7fafc'); doc.line(LM, y - 4, 562, y - 4);
+    }
+    tblRow('After Repair Value (ARV)', d.originalARV, d.newARV, false);
+    tblRow('Repair Estimate', d.originalRehab, d.newRehab, false);
+    tblRow('Acquisition Price', d.originalAcq, d.newAcq, true);
+
+    if (d.estimatedDispo) {
+      y += 4;
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
+      doc.text('Estimated Investor Purchase Price: ' + fmtM(d.estimatedDispo) + '   |   County Tier: ' + (d.countyTier != null ? d.countyTier : 'N/A'), LM, y);
+      y += 20;
+    }
+
+    // Narrative
+    y += 10;
+    doc.setDrawColor(ACCENT); doc.setLineWidth(2); doc.line(LM, y, 562, y); y += 16;
+    doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+    doc.text('Underwriter Assessment', LM, y); y += 16;
+
+    var narrative = 'After a thorough review of the marketplace activity and investor feedback for the property at ' + d.address + ', Rebuilt\'s underwriting team has determined that a price adjustment is necessary to align the acquisition cost with current market conditions and investor expectations.\n\n';
+
+    if (d.countyTier != null) {
+      if (d.countyTier <= 4) {
+        narrative += 'This property is located in a County Tier ' + d.countyTier + ' market, which indicates lower investor demand and tighter margins. Investors in this tier typically require steeper discounts to offset higher risk and longer hold times.\n\n';
+      } else if (d.countyTier <= 8) {
+        narrative += 'This property is located in a County Tier ' + d.countyTier + ' market with moderate investor demand. Buyers in this range are price-sensitive and require competitive acquisition costs to achieve acceptable returns.\n\n';
+      } else {
+        narrative += 'This property is located in a County Tier ' + d.countyTier + ' market with healthy investor demand.\n\n';
+      }
+    }
+
+    if (d.newRehab > d.originalRehab) {
+      narrative += 'Additionally, estimated repair costs have been revised upward from ' + fmtM(d.originalRehab) + ' to ' + fmtM(d.newRehab) + ', reflecting updated scope and current material/labor pricing. This increase further compresses investor margins and supports the need for a lower acquisition price.\n\n';
+    }
+
+    narrative += 'Rebuilt remains committed to closing this transaction and believes the adjusted offer of ' + fmtM(d.newAcq) + ' (a ' + Math.abs(d.pctChange) + '% adjustment) accurately reflects the property\'s current market value and allows both parties to move forward to a successful closing.';
+
+    doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(DARK);
+    var lines = doc.splitTextToSize(narrative, PW);
+    doc.text(lines, LM, y); y += lines.length * 14;
+
+    // Pro forma notes page
+    if (d.uwNotes) {
+      if (y > 600) { doc.addPage(); y = 60; }
+      y += 20;
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+      doc.text('Pro Forma Notes', LM, y); y += 6;
+      doc.setDrawColor('#e2e8f0'); doc.setLineWidth(1); doc.line(LM, y, 562, y); y += 14;
+      doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
+      var noteLines = doc.splitTextToSize(d.uwNotes, PW);
+      doc.text(noteLines, LM, y);
+    }
+
+    // Photo pages — load images and add them
+    if (d.photoUrls && d.photoUrls.length > 0) {
+      var loaded = 0;
+      var imgDataArr = [];
+      var total = Math.min(d.photoUrls.length, 21);
+
+      function addPhotoPagesToDoc() {
+        var perPage = 9, imgW = 160, imgH = 120, gapX = 16, gapY = 16, startX = LM, startY = 70;
+        var validImgs = imgDataArr.filter(function (x) { return x !== null; });
+        for (var p = 0; p < validImgs.length; p += perPage) {
+          doc.addPage();
+          doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
+          doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
+          doc.text('REBUILT', LM, 32);
+          doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
+          doc.text('UNDERWRITING SUMMARY', 130, 32);
+
+          var pageNum = Math.floor(p / perPage) + 1;
+          var totalPages = Math.ceil(validImgs.length / perPage);
+          doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+          doc.text('Property Photos (' + pageNum + '/' + totalPages + ')', LM, 62);
+
+          var batch = validImgs.slice(p, p + perPage);
+          batch.forEach(function (imgData, i) {
+            var row = Math.floor(i / 3);
+            var col = i % 3;
+            var x = startX + col * (imgW + gapX);
+            var iy = startY + row * (imgH + gapY);
+            try { doc.addImage(imgData, 'JPEG', x, iy, imgW, imgH); } catch (e) { /* skip */ }
+          });
+        }
+        // Footer
+        doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0aec0');
+        doc.text('Generated on ' + dateStr, 306, 760, { align: 'center' });
+        doc.save('Retrade_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+      }
+
+      for (var pi = 0; pi < total; pi++) {
+        (function (idx) {
+          var img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = function () {
+            var canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth; canvas.height = img.naturalHeight;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            try { imgDataArr[idx] = canvas.toDataURL('image/jpeg', 0.7); } catch (e) { imgDataArr[idx] = null; }
+            loaded++;
+            if (loaded === total) addPhotoPagesToDoc();
+          };
+          img.onerror = function () { imgDataArr[idx] = null; loaded++; if (loaded === total) addPhotoPagesToDoc(); };
+          img.src = d.photoUrls[idx];
+        })(pi);
+      }
+    } else {
+      // No photos — just save
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0aec0');
+      doc.text('Generated on ' + dateStr, 306, 760, { align: 'center' });
+      doc.save('Retrade_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+    }
   }
 
   function createPrInput(label, defaultVal) {
