@@ -43,7 +43,9 @@
   var RENO_PASS_THRESHOLD = 20;  // within 20%
   var PRACTICE_MODULE_COUNT = 4; // Modules 0-3 are practice, 4-7 are test-out
   var QUESTION_TIME_LIMIT = 600; // 10 minutes per question in seconds
-  var PROSPECT_API_BASE = 'http://localhost:8080/api/prospect-lookup';
+  var SUPABASE_URL = 'https://xpvvgecwajqmveuuhnmc.supabase.co';
+  var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhwdnZnZWN3YWpxbXZldXVobm1jIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NDQzODMxOSwiZXhwIjoyMDkwMDE0MzE5fQ.l-xhfzSv45BbZhnVg3VjW3XpG8kIiEm3nnW0tMQrMRw';
+  var sbClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
   var STORAGE_EMAIL = 'rebuilt_arv_email';
   var STORAGE_PROGRESS = 'rebuilt_arv_progress';
@@ -4539,13 +4541,13 @@
     var screen = el('div', { className: 'screen prospect-screen' });
 
     screen.appendChild(el('h1', null, 'Prospect Lookup'));
-    screen.appendChild(el('p', { className: 'landing-subtitle' }, 'Search by address, owner name, or key code'));
+    screen.appendChild(el('p', { className: 'landing-subtitle' }, 'Search by address, owner name, acquisition agent, or key code'));
 
     var searchBox = el('div', { className: 'prospect-search-box' });
     var input = el('input', {
       type: 'text',
       className: 'prospect-search-input',
-      placeholder: 'Enter address, owner name, or key code...',
+      placeholder: 'Enter address, owner, agent, or key code...',
     });
     var btn = el('button', { className: 'btn-primary prospect-search-btn' }, 'Search');
     searchBox.appendChild(input);
@@ -4559,20 +4561,26 @@
       var q = input.value.trim();
       if (q.length < 3) return;
       results.innerHTML = '<div class="prospect-loading">Searching...</div>';
-      fetch(PROSPECT_API_BASE + '/search?q=' + encodeURIComponent(q))
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
+      var pattern = '%' + q + '%';
+      sbClient
+        .from('prospects')
+        .select('id, status, key_code, address, owner_1_name, owner_2_name, beds, baths, arv, offer_price, acquisition_rep')
+        .or('address.ilike.' + pattern + ',owner_1_name.ilike.' + pattern + ',key_code.ilike.' + pattern + ',acquisition_rep.ilike.' + pattern)
+        .order('created_at', { ascending: false })
+        .limit(20)
+        .then(function (res) {
+          var data = res.data;
+          var error = res.error;
           results.innerHTML = '';
-          if (data.error) {
-            results.innerHTML = '<div class="prospect-empty">' + data.error + '</div>';
+          if (error) {
+            results.innerHTML = '<div class="prospect-empty">' + error.message + '</div>';
             return;
           }
-          if (data.length === 0) {
+          if (!data || data.length === 0) {
             results.innerHTML = '<div class="prospect-empty">No prospects found</div>';
             return;
           }
           var table = el('div', { className: 'prospect-results-table' });
-          // Header
           var hdr = el('div', { className: 'prospect-result-row prospect-result-header' });
           hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Address'));
           hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Owner'));
@@ -4601,9 +4609,6 @@
             table.appendChild(tr);
           });
           results.appendChild(table);
-        })
-        .catch(function () {
-          results.innerHTML = '<div class="prospect-empty">Search failed. Is the server running?</div>';
         });
     }
 
@@ -4626,18 +4631,34 @@
     screen.appendChild(el('div', { className: 'prospect-loading' }, 'Loading prospect data...'));
     app.appendChild(screen);
 
-    fetch(PROSPECT_API_BASE + '/' + encodeURIComponent(prospectId))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data.error) {
-          screen.innerHTML = '<div class="prospect-empty">' + data.error + '</div>';
-          return;
-        }
-        renderProspectDetail(data, returnTo);
-      })
-      .catch(function () {
-        screen.innerHTML = '<div class="prospect-empty">Failed to load prospect. Is the server running?</div>';
-      });
+    Promise.all([
+      sbClient.from('prospects').select('*').eq('id', prospectId).single(),
+      sbClient.from('prospect_photos').select('image_url, sort_order').eq('prospect_id', prospectId).order('sort_order'),
+    ]).then(function (results) {
+      var prospectRes = results[0];
+      var photosRes = results[1];
+      if (prospectRes.error) {
+        screen.innerHTML = '<div class="prospect-empty">' + prospectRes.error.message + '</div>';
+        return;
+      }
+      var r = prospectRes.data;
+      var photos = (photosRes.data || []).map(function (p) { return p.image_url; });
+
+      // Reshape flat Supabase row into the nested structure renderProspectDetail expects
+      var data = {
+        prospect: { id: r.id, status: r.status, key_code: r.key_code, mailer_code: r.mailer_code, deal_stage: r.deal_stage, created_at: r.created_at },
+        property: { address: r.address, city: r.city, state: r.state, zip: r.zip, beds: r.beds, baths: r.baths, sqft: r.sqft, year_built: r.year_built, lot_area: r.lot_area, house_type: r.house_type, attom_id: r.attom_id },
+        contact: { owner_1: r.owner_1_name, owner_2: r.owner_2_name, phone: r.phone, email: r.email, acquisition_rep: r.acquisition_rep },
+        tax_ownership: { assessed_value: r.assessed_value, annual_tax: r.annual_tax, last_sale_date: r.last_sale_date, last_sale_price: r.last_sale_price, ownership_years: r.ownership_years, assessment_year: r.assessment_year },
+        financials: { mortgage_outstanding: r.mortgage_outstanding, mortgage_total: r.mortgage_total, mortgage_in_default: r.mortgage_in_default, hoa_monthly: r.hoa_monthly_dues },
+        valuation: r.arv ? { arv: r.arv, rent_estimate: r.rent_estimate, renovation_estimate: r.renovation_estimate, renovation_grade: r.renovation_grade, condition_notes: r.condition_notes, offer_price: r.offer_price, mao: r.mao, disposition_price: r.disposition_price, seller_asking_price: r.seller_asking_price, underwriting_arv: r.underwriting_arv, underwriting_rent_estimate: r.underwriting_rent_estimate, underwriting_renovation_estimate: r.underwriting_renovation_est } : null,
+        underwriter: r.pf_arv ? { arv: r.pf_arv, repair_estimate: r.pf_repair_estimate, notes: r.pf_notes, purchase_price: r.pf_purchase_price, market_rent: r.pf_market_rent, cap_rate: r.pf_cap_rate, gross_yield: r.pf_gross_yield, noi: r.pf_noi, mao: r.pf_mao } : null,
+        pricing: { suggested_offer: r.offer_price, estimated_disposition: r.estimated_disposition, county_tier: r.county_tier, mailer_amount: r.mailer_amount },
+        photos: photos,
+      };
+
+      renderProspectDetail(data, returnTo);
+    });
   }
 
   function renderProspectDetail(data, returnTo) {
@@ -4672,6 +4693,9 @@
     if (contact.phone) contactInfo.appendChild(el('span', null, contact.phone));
     if (contact.email) contactInfo.appendChild(el('span', null, contact.email));
     contactInfo.appendChild(el('span', null, 'Owner'));
+    if (contact.acquisition_rep) {
+      contactInfo.appendChild(el('span', { className: 'prospect-acq-rep' }, 'Acq: ' + contact.acquisition_rep));
+    }
     header.appendChild(contactInfo);
 
     if (pricing.mailer_amount) {
