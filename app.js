@@ -43,6 +43,7 @@
   var RENO_PASS_THRESHOLD = 20;  // within 20%
   var PRACTICE_MODULE_COUNT = 4; // Modules 0-3 are practice, 4-7 are test-out
   var QUESTION_TIME_LIMIT = 600; // 10 minutes per question in seconds
+  var PROSPECT_API_BASE = 'http://localhost:8080/api/prospect-lookup';
 
   var STORAGE_EMAIL = 'rebuilt_arv_email';
   var STORAGE_PROGRESS = 'rebuilt_arv_progress';
@@ -142,6 +143,11 @@
         { id: 'arv-training',    label: 'ARV Training',    handler: 'bootArvTraining' },
         { id: 'reno-training',   label: 'Reno Training',   handler: null },
         { id: 'investment-math', label: 'Investment Math',  handler: null },
+      ]
+    },
+    { id: 'tools', label: 'Tools', icon: '\uD83D\uDD0D',
+      items: [
+        { id: 'prospect-lookup', label: 'Prospect Lookup', handler: 'bootProspectLookup' },
       ]
     },
     { id: 'materials', label: 'Materials', icon: '\uD83D\uDCDA', disabled: true,
@@ -1105,6 +1111,7 @@
       'bootSalesLevel3': bootSalesLevel3,
       'renderMaterials': renderMaterials,
       'renderPerformance': renderPerformance,
+      'bootProspectLookup': bootProspectLookup,
     };
 
     if (handlers[handlerName]) {
@@ -1231,6 +1238,12 @@
       }, '\uD83C\uDFC6 Leaders');
       nav.appendChild(lbBtn);
 
+      var plBtn = el('button', {
+        className: 'nav-trigger' + (activeSection === 'prospect-lookup' ? ' nav-trigger-active' : ''),
+        onClick: function () { closeAllDropdowns(); closeMobileNav(); bootProspectLookup(); }
+      }, '\uD83D\uDD0D Prospects');
+      nav.appendChild(plBtn);
+
       // Mobile equivalents
       if (mobilePanel) {
         if (isCompAnalysisDone()) {
@@ -1256,6 +1269,10 @@
           className: 'mobile-nav-direct-btn' + (activeSection === 'leaderboard' ? ' mobile-nav-trigger-active' : ''),
           onClick: function () { closeMobileNav(); renderLeaderboard(); }
         }, '\uD83C\uDFC6 Leaders'));
+        mobilePanel.appendChild(el('button', {
+          className: 'mobile-nav-direct-btn' + (activeSection === 'prospect-lookup' ? ' mobile-nav-trigger-active' : ''),
+          onClick: function () { closeMobileNav(); bootProspectLookup(); }
+        }, '\uD83D\uDD0D Prospects'));
       }
     }
 
@@ -4484,6 +4501,681 @@
     }
 
     renderTable();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Prospect Lookup
+  // ---------------------------------------------------------------------------
+
+  function fmtDollars(v) {
+    if (v == null || isNaN(v)) return 'N/A';
+    var n = Number(v);
+    return '$' + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+
+  function fmtPsf(v, sqft) {
+    if (!v || !sqft || sqft <= 0) return '';
+    return '$' + (v / sqft).toFixed(2) + '/ft\u00B2';
+  }
+
+  function conditionLabel(grade) {
+    var map = { A: 'Light cosmetic', B: 'Minor repairs', C: 'Moderate renovation', D: 'Heavy renovation', F: 'Gut renovation' };
+    return map[grade] || '';
+  }
+
+  function conditionCost(grade) {
+    var map = { A: '$9K', B: '$10K', C: '$18K', D: '$29K', F: '$37K' };
+    return map[grade] || '';
+  }
+
+  function bootProspectLookup() {
+    activeSection = 'prospect-lookup';
+    renderNav();
+    renderProspectSearch();
+  }
+
+  function renderProspectSearch() {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen prospect-screen' });
+
+    screen.appendChild(el('h1', null, 'Prospect Lookup'));
+    screen.appendChild(el('p', { className: 'landing-subtitle' }, 'Search by address, owner name, or key code'));
+
+    var searchBox = el('div', { className: 'prospect-search-box' });
+    var input = el('input', {
+      type: 'text',
+      className: 'prospect-search-input',
+      placeholder: 'Enter address, owner name, or key code...',
+    });
+    var btn = el('button', { className: 'btn-primary prospect-search-btn' }, 'Search');
+    searchBox.appendChild(input);
+    searchBox.appendChild(btn);
+    screen.appendChild(searchBox);
+
+    var results = el('div', { className: 'prospect-results', id: 'prospect-results' });
+    screen.appendChild(results);
+
+    function doSearch() {
+      var q = input.value.trim();
+      if (q.length < 3) return;
+      results.innerHTML = '<div class="prospect-loading">Searching...</div>';
+      fetch(PROSPECT_API_BASE + '/search?q=' + encodeURIComponent(q))
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          results.innerHTML = '';
+          if (data.error) {
+            results.innerHTML = '<div class="prospect-empty">' + data.error + '</div>';
+            return;
+          }
+          if (data.length === 0) {
+            results.innerHTML = '<div class="prospect-empty">No prospects found</div>';
+            return;
+          }
+          var table = el('div', { className: 'prospect-results-table' });
+          // Header
+          var hdr = el('div', { className: 'prospect-result-row prospect-result-header' });
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Address'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Owner'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Status'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Beds/Baths'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'ARV'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Offer'));
+          hdr.appendChild(el('div', { className: 'prospect-result-cell' }, ''));
+          table.appendChild(hdr);
+
+          data.forEach(function (row) {
+            var tr = el('div', { className: 'prospect-result-row' });
+            tr.appendChild(el('div', { className: 'prospect-result-cell prospect-result-addr' }, row.address || 'N/A'));
+            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.owner_1_name || '-'));
+            tr.appendChild(el('div', { className: 'prospect-result-cell' },
+              el('span', { className: 'prospect-status-badge prospect-status-' + (row.status || 'unknown') }, row.status || '-')
+            ));
+            tr.appendChild(el('div', { className: 'prospect-result-cell' }, (row.beds || 0) + 'bd / ' + (row.baths || 0) + 'ba'));
+            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.arv ? fmtDollars(row.arv) : '-'));
+            tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.offer_price ? fmtDollars(row.offer_price) : '-'));
+            var viewBtn = el('button', {
+              className: 'btn-primary prospect-view-btn',
+              onClick: function () { loadProspectDetail(row.id); }
+            }, 'View');
+            tr.appendChild(el('div', { className: 'prospect-result-cell' }, viewBtn));
+            table.appendChild(tr);
+          });
+          results.appendChild(table);
+        })
+        .catch(function () {
+          results.innerHTML = '<div class="prospect-empty">Search failed. Is the server running?</div>';
+        });
+    }
+
+    btn.addEventListener('click', doSearch);
+    input.addEventListener('keydown', function (e) { if (e.key === 'Enter') doSearch(); });
+
+    // Back button
+    screen.appendChild(el('button', {
+      className: 'btn-secondary sales-back-btn',
+      onClick: function () { activeSection = null; renderNav(); renderLandingPage(); }
+    }, '\u2190 Back to Home'));
+
+    app.appendChild(screen);
+    input.focus();
+  }
+
+  function loadProspectDetail(prospectId, returnTo) {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen prospect-screen' });
+    screen.appendChild(el('div', { className: 'prospect-loading' }, 'Loading prospect data...'));
+    app.appendChild(screen);
+
+    fetch(PROSPECT_API_BASE + '/' + encodeURIComponent(prospectId))
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.error) {
+          screen.innerHTML = '<div class="prospect-empty">' + data.error + '</div>';
+          return;
+        }
+        renderProspectDetail(data, returnTo);
+      })
+      .catch(function () {
+        screen.innerHTML = '<div class="prospect-empty">Failed to load prospect. Is the server running?</div>';
+      });
+  }
+
+  function renderProspectDetail(data, returnTo) {
+    var app = clearApp();
+    var screen = el('div', { className: 'screen prospect-screen' });
+
+    var p = data.prospect;
+    var prop = data.property;
+    var contact = data.contact;
+    var tax = data.tax_ownership;
+    var fin = data.financials;
+    var val = data.valuation;
+    var uw = data.underwriter;
+    var pricing = data.pricing;
+    var photos = data.photos || [];
+
+    var goBack = returnTo === 'dashboard' ? function () { renderDashboard(); } : function () { renderProspectSearch(); };
+    var backLabel = returnTo === 'dashboard' ? '\u2190 Back To Dashboard' : '\u2190 Back To Lookup';
+
+    // === HEADER BAR ===
+    var header = el('div', { className: 'prospect-header-bar' });
+    var backLink = el('button', {
+      className: 'prospect-back-link',
+      onClick: goBack
+    }, backLabel);
+    header.appendChild(backLink);
+
+    var contactInfo = el('div', { className: 'prospect-contact-info' });
+    if (contact.owner_1) {
+      contactInfo.appendChild(el('a', { className: 'prospect-contact-name', href: '#' }, contact.owner_1));
+    }
+    if (contact.phone) contactInfo.appendChild(el('span', null, contact.phone));
+    if (contact.email) contactInfo.appendChild(el('span', null, contact.email));
+    contactInfo.appendChild(el('span', null, 'Owner'));
+    header.appendChild(contactInfo);
+
+    if (pricing.mailer_amount) {
+      header.appendChild(el('span', { className: 'prospect-mailer-badge' }, 'Mailer Amount: ' + fmtDollars(pricing.mailer_amount)));
+    }
+    screen.appendChild(header);
+
+    // === PROPERTY INFO BAR ===
+    var propBar = el('div', { className: 'prospect-prop-bar' });
+    var addrLine = el('div', { className: 'prospect-address' });
+    addrLine.appendChild(el('h2', null, (prop.address || '').toUpperCase()));
+    var details = [];
+    if (prop.beds) details.push(prop.beds + ' bd');
+    if (prop.baths) details.push(prop.baths + ' ba');
+    if (prop.sqft) details.push(Number(prop.sqft).toLocaleString() + ' ft\u00B2');
+    if (prop.year_built) details.push('Built ' + prop.year_built);
+    if (prop.lot_area) details.push(Number(prop.lot_area).toLocaleString() + ' ft\u00B2 lot');
+    if (prop.house_type) details.push(prop.house_type.replace(/_/g, ' ').replace(/\b\w/g, function(l){return l.toUpperCase();}));
+    addrLine.appendChild(el('p', null, details.join(' | ')));
+    if (tax.last_sale_date) {
+      var saleDate = new Date(tax.last_sale_date);
+      var saleStr = saleDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      addrLine.appendChild(el('p', { className: 'prospect-last-sale-line' }, 'Last Sale: ' + saleStr + ' \u2022 ' + fmtDollars(tax.last_sale_price)));
+    }
+    propBar.appendChild(addrLine);
+
+    var statusTag = el('span', { className: 'prospect-deal-status' }, p.status ? p.status.toUpperCase() : '');
+    propBar.appendChild(statusTag);
+    screen.appendChild(propBar);
+
+    // === MAIN LAYOUT: 3-column grid ===
+    var mainGrid = el('div', { className: 'prospect-main-grid' });
+
+    // --- LEFT COLUMN ---
+    var leftCol = el('div', { className: 'prospect-col prospect-col-left' });
+
+    // Tax & Ownership card
+    var taxCard = el('div', { className: 'prospect-card' });
+    taxCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'Tax & Ownership'));
+    var taxTable = el('div', { className: 'prospect-kv-table' });
+    taxTable.appendChild(kvRow('Tax Assessed (ATTOM):', tax.assessed_value ? fmtDollars(tax.assessed_value) : 'N/A'));
+    taxTable.appendChild(kvRow('Annual Tax:', tax.annual_tax ? fmtDollars(tax.annual_tax) : 'N/A'));
+    if (tax.last_sale_date) {
+      var sd = new Date(tax.last_sale_date);
+      taxTable.appendChild(kvRow('Last Sale:', sd.toLocaleDateString('en-US', {month:'short', year:'numeric'}) + ' \u2022 ' + fmtDollars(tax.last_sale_price)));
+    }
+    taxTable.appendChild(kvRow('Ownership:', tax.ownership_years != null ? tax.ownership_years + ' years' : 'N/A'));
+    taxCard.appendChild(taxTable);
+
+    // Contacts
+    var contactSection = el('div', { className: 'prospect-contact-section' });
+    contactSection.appendChild(el('div', { className: 'prospect-contact-label' }, 'Contacts:'));
+    if (contact.owner_1) {
+      var c1 = el('div', { className: 'prospect-contact-entry' });
+      c1.appendChild(el('strong', null, contact.owner_1));
+      c1.appendChild(el('span', { className: 'prospect-contact-type' }, '(Primary)'));
+      c1.appendChild(el('div', null, 'Owner'));
+      contactSection.appendChild(c1);
+    }
+    if (contact.owner_2) {
+      var c2 = el('div', { className: 'prospect-contact-entry' });
+      c2.appendChild(el('strong', null, contact.owner_2));
+      c2.appendChild(el('div', null, 'Owner'));
+      contactSection.appendChild(c2);
+    }
+    taxCard.appendChild(contactSection);
+    leftCol.appendChild(taxCard);
+
+    // Financials card
+    var finCard = el('div', { className: 'prospect-card' });
+    finCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'Financials'));
+
+    var mortAmt = fin.mortgage_outstanding || 0;
+    var mortTotal = fin.mortgage_total || 0;
+    var inDefault = fin.mortgage_in_default;
+    var defaultBadge = el('span', {
+      className: 'prospect-badge ' + (inDefault ? 'prospect-badge-red' : 'prospect-badge-green')
+    }, inDefault ? 'IN DEFAULT' : 'NOT IN DEFAULT');
+    finCard.appendChild(el('div', { className: 'prospect-fin-header' },
+      el('div', null,
+        el('div', { className: 'prospect-fin-label' }, 'OUTSTANDING MORTGAGE'),
+        el('div', { className: 'prospect-fin-amount' }, fmtDollars(mortAmt))
+      ),
+      defaultBadge
+    ));
+
+    // Mortgage bar
+    if (mortTotal > 0) {
+      var pctPaid = Math.min(100, Math.round(((mortTotal - mortAmt) / mortTotal) * 100));
+      var mortBar = el('div', { className: 'prospect-mort-bar' });
+      mortBar.appendChild(el('div', { className: 'prospect-mort-fill', style: { width: pctPaid + '%' } }));
+      finCard.appendChild(mortBar);
+      var mortLabels = el('div', { className: 'prospect-mort-labels' });
+      mortLabels.appendChild(el('span', null, 'Paid: ' + fmtDollars(mortTotal - mortAmt)));
+      mortLabels.appendChild(el('span', null, 'Total: ' + fmtDollars(mortTotal)));
+      finCard.appendChild(mortLabels);
+    }
+
+    finCard.appendChild(kvRow('HOA/mo:', fin.hoa_monthly ? fmtDollars(fin.hoa_monthly) : 'N/A'));
+    leftCol.appendChild(finCard);
+
+    // Rent Estimates card
+    var rentCard = el('div', { className: 'prospect-card' });
+    rentCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'Rent Estimates'));
+    var rentTable = el('div', { className: 'prospect-kv-table' });
+    var rentSources = [
+      { source: 'Prospect Valuation', rent: val ? val.rent_estimate : null },
+      { source: 'Underwriter', rent: uw ? uw.market_rent : null },
+    ];
+    var rentTbl = el('div', { className: 'prospect-rent-table' });
+    var rentHdr = el('div', { className: 'prospect-rent-row prospect-rent-header' });
+    rentHdr.appendChild(el('div', null, 'Source'));
+    rentHdr.appendChild(el('div', null, 'Rent'));
+    rentTbl.appendChild(rentHdr);
+    rentSources.forEach(function (rs) {
+      var row = el('div', { className: 'prospect-rent-row' });
+      row.appendChild(el('div', null, rs.source));
+      row.appendChild(el('div', null, rs.rent ? fmtDollars(rs.rent) : 'N/A'));
+      rentTbl.appendChild(row);
+    });
+    rentCard.appendChild(rentTbl);
+    leftCol.appendChild(rentCard);
+
+    mainGrid.appendChild(leftCol);
+
+    // --- CENTER COLUMN ---
+    var centerCol = el('div', { className: 'prospect-col prospect-col-center' });
+
+    // Pricing Signals card
+    var pricingCard = el('div', { className: 'prospect-card' });
+    pricingCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'Pricing Signals'));
+    pricingCard.appendChild(el('p', { className: 'prospect-card-subtitle' }, 'As-is price signals, fixed-up estimate'));
+
+    // As-Is table
+    pricingCard.appendChild(el('div', { className: 'prospect-section-label' }, 'AS-IS PRICE SIGNALS'));
+    var asisTbl = el('div', { className: 'prospect-pricing-table' });
+    var asisHdr = el('div', { className: 'prospect-pricing-row prospect-pricing-header' });
+    asisHdr.appendChild(el('div', null, 'Source'));
+    asisHdr.appendChild(el('div', null, 'Value'));
+    asisHdr.appendChild(el('div', null, 'Condition'));
+    asisTbl.appendChild(asisHdr);
+
+    // Valuation as-is
+    if (val && val.arv) {
+      var asRow = el('div', { className: 'prospect-pricing-row' });
+      asRow.appendChild(el('div', null, 'Prospect Valuation'));
+      asRow.appendChild(el('div', null, fmtDollars(val.arv) + (prop.sqft ? ' (' + fmtPsf(val.arv, prop.sqft) + ')' : '')));
+      asRow.appendChild(el('div', null, val.renovation_grade || 'N/A'));
+      asisTbl.appendChild(asRow);
+    }
+    pricingCard.appendChild(asisTbl);
+
+    // Fixed-Up table
+    pricingCard.appendChild(el('div', { className: 'prospect-section-label' }, 'FIXED-UP ESTIMATE'));
+    var fixTbl = el('div', { className: 'prospect-pricing-table' });
+    var fixHdr = el('div', { className: 'prospect-pricing-row prospect-pricing-header' });
+    fixHdr.appendChild(el('div', null, 'Source'));
+    fixHdr.appendChild(el('div', null, 'Value'));
+    fixHdr.appendChild(el('div', null, 'Cond.'));
+    fixTbl.appendChild(fixHdr);
+
+    if (uw && uw.arv) {
+      var uwRow = el('div', { className: 'prospect-pricing-row' });
+      uwRow.appendChild(el('div', null, 'Underwriter (Pro Forma)'));
+      uwRow.appendChild(el('div', null, fmtDollars(uw.arv)));
+      uwRow.appendChild(el('div', null, uw.notes ? uw.notes.substring(0, 50) : 'N/A'));
+      fixTbl.appendChild(uwRow);
+    }
+    if (val && val.underwriting_arv) {
+      var uwvRow = el('div', { className: 'prospect-pricing-row' });
+      uwvRow.appendChild(el('div', null, 'Underwriting Override'));
+      uwvRow.appendChild(el('div', null, fmtDollars(val.underwriting_arv)));
+      uwvRow.appendChild(el('div', null, '-'));
+      fixTbl.appendChild(uwvRow);
+    }
+    pricingCard.appendChild(fixTbl);
+    centerCol.appendChild(pricingCard);
+
+    // Marketing Photos
+    if (photos.length > 0) {
+      var photoCard = el('div', { className: 'prospect-card prospect-photo-card' });
+      photoCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'Marketing Photos'));
+      var photoGrid = el('div', { className: 'prospect-photo-grid' });
+      photos.forEach(function (url, idx) {
+        var imgWrap = el('div', { className: 'prospect-photo-wrap' });
+        var img = el('img', {
+          src: url,
+          className: 'prospect-photo',
+          loading: idx > 5 ? 'lazy' : 'eager',
+          onClick: function () { openProspectLightbox(photos, idx); }
+        });
+        img.onerror = function () { this.style.display = 'none'; };
+        imgWrap.appendChild(img);
+        photoGrid.appendChild(imgWrap);
+      });
+      photoCard.appendChild(photoGrid);
+      centerCol.appendChild(photoCard);
+    }
+
+    mainGrid.appendChild(centerCol);
+
+    // --- RIGHT COLUMN: Offer Calculation ---
+    var rightCol = el('div', { className: 'prospect-col prospect-col-right' });
+
+    var offerCard = el('div', { className: 'prospect-card prospect-offer-card' });
+    offerCard.appendChild(el('h3', { className: 'prospect-card-title' }, 'OFFER CALCULATION'));
+
+    // Suggested Offer & Est. Disposition header
+    var offerHeader = el('div', { className: 'prospect-offer-header' });
+    var sugBox = el('div', { className: 'prospect-offer-box prospect-offer-suggested' });
+    sugBox.appendChild(el('div', { className: 'prospect-offer-label' }, 'SUGGESTED OFFER'));
+    sugBox.appendChild(el('div', { className: 'prospect-offer-amount' }, pricing.suggested_offer ? fmtDollars(pricing.suggested_offer) : 'N/A'));
+    if (pricing.suggested_offer && prop.sqft) {
+      sugBox.appendChild(el('div', { className: 'prospect-offer-psf' }, fmtPsf(pricing.suggested_offer, prop.sqft)));
+    }
+    offerHeader.appendChild(sugBox);
+
+    var dispoBox = el('div', { className: 'prospect-offer-box prospect-offer-dispo' });
+    dispoBox.appendChild(el('div', { className: 'prospect-offer-label' }, 'EST. DISPOSITION'));
+    dispoBox.appendChild(el('div', { className: 'prospect-offer-amount' }, pricing.estimated_disposition ? fmtDollars(pricing.estimated_disposition) : 'N/A'));
+    if (pricing.estimated_disposition && prop.sqft) {
+      dispoBox.appendChild(el('div', { className: 'prospect-offer-psf' }, fmtPsf(pricing.estimated_disposition, prop.sqft)));
+    }
+    offerHeader.appendChild(dispoBox);
+    offerCard.appendChild(offerHeader);
+
+    // ARV display
+    var arvDisplay = val ? (val.underwriting_arv || val.arv) : (uw ? uw.arv : null);
+    offerCard.appendChild(offerField('ARV', arvDisplay, prop.sqft));
+
+    // Rent Estimate
+    var rentDisplay = val ? (val.underwriting_rent_estimate || val.rent_estimate) : (uw ? uw.market_rent : null);
+    offerCard.appendChild(offerField('Rent Estimate', rentDisplay, null));
+
+    // Condition selector display
+    var renoGrade = val ? val.renovation_grade : null;
+    if (renoGrade) {
+      var condRow = el('div', { className: 'prospect-offer-row' });
+      condRow.appendChild(el('div', { className: 'prospect-offer-field-label' }, 'Condition'));
+      var grades = ['A', 'B', 'C', 'D', 'F'];
+      var gradeBar = el('div', { className: 'prospect-grade-bar' });
+      grades.forEach(function (g) {
+        var gBtn = el('div', {
+          className: 'prospect-grade-btn' + (g === renoGrade ? ' prospect-grade-active' : '')
+        });
+        gBtn.appendChild(el('div', { className: 'prospect-grade-letter' }, g));
+        gBtn.appendChild(el('div', { className: 'prospect-grade-cost' }, conditionCost(g)));
+        gradeBar.appendChild(gBtn);
+      });
+      condRow.appendChild(gradeBar);
+      if (renoGrade) {
+        condRow.appendChild(el('div', { className: 'prospect-condition-desc' }, conditionLabel(renoGrade) + ' (' + renoGrade + ') selected'));
+      }
+      offerCard.appendChild(condRow);
+    }
+
+    // Renovation Estimate
+    var renoEst = val ? (val.underwriting_renovation_estimate || val.renovation_estimate) : (uw ? uw.repair_estimate : null);
+    offerCard.appendChild(offerField('Renovation Estimate', renoEst, prop.sqft));
+
+    // Offer Price
+    offerCard.appendChild(offerField('Offer Price', pricing.suggested_offer, prop.sqft));
+
+    // MAO
+    var maoVal = val ? val.mao : null;
+    if (maoVal) offerCard.appendChild(offerField('MAO', maoVal, null));
+
+    // County Tier
+    if (pricing.county_tier) {
+      var tierRow = el('div', { className: 'prospect-offer-row' });
+      tierRow.appendChild(el('div', { className: 'prospect-offer-field-label' }, 'County Tier'));
+      tierRow.appendChild(el('div', { className: 'prospect-offer-field-value' }, String(pricing.county_tier)));
+      offerCard.appendChild(tierRow);
+    }
+
+    // Underwriter Notes
+    if (uw && uw.notes) {
+      var notesSection = el('div', { className: 'prospect-uw-notes' });
+      notesSection.appendChild(el('h4', null, 'Underwriter Notes'));
+      notesSection.appendChild(el('p', null, uw.notes));
+      offerCard.appendChild(notesSection);
+    }
+
+    // === PRICE REDUCTION GENERATOR BUTTON ===
+    var prBtn = el('button', {
+      className: 'btn-primary prospect-price-reduction-btn',
+      onClick: function () { openPriceReductionModal(data); }
+    }, 'Generate Price Reduction PDF');
+    offerCard.appendChild(prBtn);
+
+    rightCol.appendChild(offerCard);
+    mainGrid.appendChild(rightCol);
+
+    screen.appendChild(mainGrid);
+
+    // Back button
+    screen.appendChild(el('button', {
+      className: 'btn-secondary sales-back-btn',
+      onClick: goBack
+    }, backLabel));
+
+    app.appendChild(screen);
+  }
+
+  function kvRow(label, value) {
+    var row = el('div', { className: 'prospect-kv-row' });
+    row.appendChild(el('span', { className: 'prospect-kv-label' }, label));
+    row.appendChild(el('span', { className: 'prospect-kv-value' }, value || 'N/A'));
+    return row;
+  }
+
+  function offerField(label, value, sqft) {
+    var row = el('div', { className: 'prospect-offer-row' });
+    row.appendChild(el('div', { className: 'prospect-offer-field-label' }, label));
+    var valEl = el('div', { className: 'prospect-offer-field-value' }, value ? fmtDollars(value) : '-');
+    row.appendChild(valEl);
+    if (value && sqft && sqft > 0) {
+      row.appendChild(el('div', { className: 'prospect-offer-field-psf' }, fmtPsf(value, sqft)));
+    }
+    return row;
+  }
+
+  function openProspectLightbox(photos, startIdx) {
+    var overlay = el('div', { className: 'prospect-lightbox' });
+    var idx = startIdx;
+
+    function render() {
+      overlay.innerHTML = '';
+      var close = el('button', { className: 'prospect-lb-close', onClick: function () { overlay.remove(); } }, '\u2715');
+      overlay.appendChild(close);
+      var img = el('img', { src: photos[idx], className: 'prospect-lb-img' });
+      overlay.appendChild(img);
+      var counter = el('div', { className: 'prospect-lb-counter' }, (idx + 1) + ' / ' + photos.length);
+      overlay.appendChild(counter);
+      if (photos.length > 1) {
+        overlay.appendChild(el('button', {
+          className: 'prospect-lb-prev',
+          onClick: function () { idx = (idx - 1 + photos.length) % photos.length; render(); }
+        }, '\u2190'));
+        overlay.appendChild(el('button', {
+          className: 'prospect-lb-next',
+          onClick: function () { idx = (idx + 1) % photos.length; render(); }
+        }, '\u2192'));
+      }
+    }
+
+    render();
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Price Reduction Generator
+  // ---------------------------------------------------------------------------
+
+  function openPriceReductionModal(data) {
+    var overlay = el('div', { className: 'prospect-modal-overlay' });
+    var modal = el('div', { className: 'prospect-modal' });
+
+    var val = data.valuation;
+    var uw = data.underwriter;
+    var prop = data.property;
+    var pricing = data.pricing;
+
+    var currentARV = uw ? Number(uw.arv) : (val ? Number(val.arv) : 0);
+    var currentRehab = uw ? Number(uw.repair_estimate) : (val ? Number(val.renovation_estimate) : 0);
+    var currentOffer = pricing.suggested_offer ? Number(pricing.suggested_offer) : 0;
+
+    modal.appendChild(el('h2', null, 'Price Reduction Generator'));
+    modal.appendChild(el('p', { className: 'prospect-modal-subtitle' },
+      (prop.address || '').toUpperCase()));
+
+    // Current values display
+    var currentSection = el('div', { className: 'pr-current-section' });
+    currentSection.appendChild(el('h4', null, 'Current Values'));
+    currentSection.appendChild(kvRow('Current ARV:', fmtDollars(currentARV)));
+    currentSection.appendChild(kvRow('Current Repair Estimate:', fmtDollars(currentRehab)));
+    currentSection.appendChild(kvRow('Current Offer:', fmtDollars(currentOffer)));
+    if (pricing.estimated_disposition) {
+      currentSection.appendChild(kvRow('Est. Disposition:', fmtDollars(pricing.estimated_disposition)));
+    }
+    if (pricing.county_tier) {
+      currentSection.appendChild(kvRow('County Tier:', String(pricing.county_tier)));
+    }
+    modal.appendChild(currentSection);
+
+    // New values inputs
+    var inputSection = el('div', { className: 'pr-input-section' });
+    inputSection.appendChild(el('h4', null, 'New Values'));
+
+    var newAcqInput = createPrInput('New Acquisition Price *', currentOffer);
+    var newArvInput = createPrInput('New ARV (leave blank to keep current)', '');
+    var newRehabInput = createPrInput('New Repair Estimate (leave blank to auto-calculate)', '');
+    inputSection.appendChild(newAcqInput.wrapper);
+    inputSection.appendChild(newArvInput.wrapper);
+    inputSection.appendChild(newRehabInput.wrapper);
+
+    // Preview section
+    var previewSection = el('div', { className: 'pr-preview', id: 'pr-preview' });
+
+    function updatePreview() {
+      previewSection.innerHTML = '';
+      var newAcq = Number(newAcqInput.input.value) || 0;
+      if (newAcq <= 0) return;
+      var newArv = Number(newArvInput.input.value) || currentARV;
+      var priceDiff = currentOffer - newAcq;
+      var newRehab = Number(newRehabInput.input.value) || Math.round(currentRehab + (priceDiff * 1.1222));
+      var pctChange = currentOffer > 0 ? ((newAcq - currentOffer) / currentOffer * 100).toFixed(1) : 0;
+
+      // Compute new estimated dispo
+      var newDispo = null;
+      if (newArv > 0) {
+        var basePct = 0.70;
+        var cpm = {1:-0.15,2:-0.13,3:-0.13,4:-0.11,5:-0.06,6:-0.03,7:-0.03,8:-0.02,9:0.00,10:0.00,11:0.04,12:0.05,13:0.08,14:0.12};
+        var ctPts = pricing.county_tier != null ? (cpm[pricing.county_tier] || 0) : 0;
+        var renoR = newRehab ? newRehab / newArv : 0;
+        var renoPts = (renoR >= 0 && renoR < 0.20) ? 0.02 : 0.00;
+        newDispo = Math.round((basePct + ctPts + renoPts) * newArv - newRehab);
+      }
+
+      previewSection.appendChild(el('h4', null, 'Preview'));
+      previewSection.appendChild(kvRow('Price Change:', pctChange + '%'));
+      previewSection.appendChild(kvRow('New Offer:', fmtDollars(newAcq)));
+      previewSection.appendChild(kvRow('Adjusted Rehab:', fmtDollars(newRehab)));
+      if (newDispo) previewSection.appendChild(kvRow('New Est. Disposition:', fmtDollars(newDispo)));
+      var spread = newDispo ? newDispo - newAcq : null;
+      if (spread != null) {
+        previewSection.appendChild(kvRow('Spread:', fmtDollars(spread)));
+      }
+    }
+
+    newAcqInput.input.addEventListener('input', updatePreview);
+    newArvInput.input.addEventListener('input', updatePreview);
+    newRehabInput.input.addEventListener('input', updatePreview);
+
+    inputSection.appendChild(previewSection);
+    modal.appendChild(inputSection);
+
+    // Buttons
+    var btnRow = el('div', { className: 'pr-btn-row' });
+    var generateBtn = el('button', { className: 'btn-primary', onClick: function () {
+      var newAcq = Number(newAcqInput.input.value);
+      if (!newAcq || newAcq <= 0) {
+        alert('Please enter a new acquisition price');
+        return;
+      }
+      var attomId = prop.attom_id;
+      if (!attomId) {
+        alert('No ATTOM ID found for this property — cannot generate PDF');
+        return;
+      }
+
+      generateBtn.textContent = 'Generating...';
+      generateBtn.disabled = true;
+
+      var body = { newAcquisitionPrice: newAcq };
+      if (newArvInput.input.value) body.newARV = Number(newArvInput.input.value);
+      if (newRehabInput.input.value) body.newRepairEstimate = Number(newRehabInput.input.value);
+
+      fetch('http://localhost:8080/api/retrade-pdf/' + attomId, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.blob();
+        })
+        .then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          window.open(url, '_blank');
+          generateBtn.textContent = 'Generate Price Reduction PDF';
+          generateBtn.disabled = false;
+        })
+        .catch(function (err) {
+          alert('Failed to generate PDF: ' + err.message);
+          generateBtn.textContent = 'Generate Price Reduction PDF';
+          generateBtn.disabled = false;
+        });
+    }}, 'Generate Price Reduction PDF');
+
+    var cancelBtn = el('button', { className: 'btn-secondary', onClick: function () { overlay.remove(); } }, 'Cancel');
+    btnRow.appendChild(generateBtn);
+    btnRow.appendChild(cancelBtn);
+    modal.appendChild(btnRow);
+
+    overlay.appendChild(modal);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove(); });
+    document.body.appendChild(overlay);
+
+    updatePreview();
+  }
+
+  function createPrInput(label, defaultVal) {
+    var wrapper = el('div', { className: 'pr-input-group' });
+    wrapper.appendChild(el('label', null, label));
+    var input = el('input', {
+      type: 'number',
+      className: 'pr-input',
+      value: defaultVal != null ? String(defaultVal) : '',
+      placeholder: '0',
+    });
+    wrapper.appendChild(input);
+    return { wrapper: wrapper, input: input };
   }
 
   // ---------------------------------------------------------------------------
