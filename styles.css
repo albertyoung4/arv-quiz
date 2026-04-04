@@ -3135,6 +3135,16 @@ body {
 .prospect-result-thumb { width: 60px; min-width: 60px; padding: 4px; }
 .prospect-thumb-img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; }
 .prospect-result-row:not(.prospect-result-header):hover { background: #f0f9ff; cursor: pointer; }
+.prospect-report-row {
+  display: grid; grid-template-columns: 100px 140px 100px 100px 100px 100px 80px;
+  gap: 6px; padding: 8px 12px; align-items: center; font-size: 13px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.prospect-report-row:last-child { border-bottom: none; }
+.prospect-report-link {
+  color: var(--accent); font-weight: 600; font-size: 12px; text-decoration: none;
+}
+.prospect-report-link:hover { text-decoration: underline; }
 .prospect-view-btn { padding: 4px 12px; font-size: 12px; }
 .prospect-status-badge {
   display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px;
