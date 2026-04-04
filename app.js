@@ -4603,7 +4603,7 @@
         .from('prospects')
         .select('*')
         .or('address.ilike.' + pattern + ',owner_1_name.ilike.' + pattern + ',key_code.ilike.' + pattern + ',acquisition_rep.ilike.' + pattern)
-        .order('created_at', { ascending: false })
+        .order('contract_date', { ascending: false, nullsFirst: false })
         .limit(20)
         .then(function (res) {
           var data = res.data;
