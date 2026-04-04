@@ -5531,7 +5531,7 @@
         // Footer
         doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0aec0');
         doc.text('Generated on ' + dateStr, 306, 760, { align: 'center' });
-        doc.save('Retrade_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+        doc.save('Inspection_Report_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
       }
 
       for (var pi = 0; pi < total; pi++) {
@@ -5554,7 +5554,7 @@
       // No photos — just save
       doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0aec0');
       doc.text('Generated on ' + dateStr, 306, 760, { align: 'center' });
-      doc.save('Retrade_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
+      doc.save('Inspection_Report_' + d.address.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf');
     }
   }
 
