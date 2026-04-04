@@ -5379,12 +5379,10 @@
     doc.text(d.acqRep, 306, 420, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
     doc.text('Acquisition Representative', 306, 438, { align: 'center' });
-    // Rebuilt logo
-    addLogo(281, 640, 50, 85);
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text('REBUILT', 306, 720, { align: 'center' });
+    doc.text('REBUILT', 306, 700, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
-    doc.text('www.Rebuilt.com', 306, 736, { align: 'center' });
+    doc.text('www.Rebuilt.com', 306, 716, { align: 'center' });
 
     // === PAGE 2: SUMMARY ===
     doc.addPage();
