@@ -4564,7 +4564,7 @@
       var pattern = '%' + q + '%';
       sbClient
         .from('prospects')
-        .select('id, status, key_code, address, owner_1_name, owner_2_name, beds, baths, arv, offer_price, acquisition_rep, attom_id')
+        .select('*')
         .or('address.ilike.' + pattern + ',owner_1_name.ilike.' + pattern + ',key_code.ilike.' + pattern + ',acquisition_rep.ilike.' + pattern)
         .order('created_at', { ascending: false })
         .limit(20)
@@ -4598,6 +4598,10 @@
             hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Beds/Baths'));
             hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'ARV'));
             hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Offer'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Pred. Investor'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Acq Agent'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Contract'));
+            hdr.appendChild(el('div', { className: 'prospect-result-cell' }, 'Marketing'));
             hdr.appendChild(el('div', { className: 'prospect-result-cell' }, ''));
             table.appendChild(hdr);
 
@@ -4619,6 +4623,10 @@
               tr.appendChild(el('div', { className: 'prospect-result-cell' }, (row.beds || 0) + 'bd / ' + (row.baths || 0) + 'ba'));
               tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.arv ? fmtDollars(row.arv) : '-'));
               tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.offer_price ? fmtDollars(row.offer_price) : '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.estimated_disposition ? fmtDollars(row.estimated_disposition) : '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.acquisition_rep || '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.contract_date ? new Date(row.contract_date).toLocaleDateString() : '-'));
+              tr.appendChild(el('div', { className: 'prospect-result-cell' }, row.marketing_date ? new Date(row.marketing_date).toLocaleDateString() : '-'));
               var viewBtn = el('button', {
                 className: 'btn-primary prospect-view-btn',
                 onClick: function () { loadProspectDetail(row.id); }
