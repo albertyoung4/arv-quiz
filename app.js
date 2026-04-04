@@ -5202,6 +5202,37 @@
     inputSection.appendChild(previewSection);
     modal.appendChild(inputSection);
 
+    // Underwriter Notes display
+    var uwNotesText = uw ? uw.notes : null;
+    var includeUwNotes = true;
+    var uwCheckbox;
+    if (uwNotesText) {
+      var uwSection = el('div', { className: 'pr-uw-notes-section' });
+      var uwHeader = el('div', { className: 'pr-uw-notes-header' });
+      uwHeader.appendChild(el('h4', null, 'Underwriter Notes'));
+      uwCheckbox = el('input', { type: 'checkbox', checked: true, id: 'pr-include-uw' });
+      uwCheckbox.addEventListener('change', function () { includeUwNotes = uwCheckbox.checked; });
+      var uwLabel = el('label', { htmlFor: 'pr-include-uw', className: 'pr-uw-checkbox-label' }, ' Include in report');
+      var uwCheckWrap = el('div', { className: 'pr-uw-check-wrap' });
+      uwCheckWrap.appendChild(uwCheckbox);
+      uwCheckWrap.appendChild(uwLabel);
+      uwHeader.appendChild(uwCheckWrap);
+      uwSection.appendChild(uwHeader);
+      uwSection.appendChild(el('div', { className: 'pr-uw-notes-text' }, uwNotesText));
+      modal.appendChild(uwSection);
+    }
+
+    // Remarks
+    var remarksSection = el('div', { className: 'pr-input-section' });
+    remarksSection.appendChild(el('h4', null, 'Remarks'));
+    var remarksTextarea = el('textarea', {
+      className: 'pr-remarks-input',
+      placeholder: 'Add any additional remarks or notes for the price reduction report...',
+      rows: 4
+    });
+    remarksSection.appendChild(remarksTextarea);
+    modal.appendChild(remarksSection);
+
     // Buttons
     var btnRow = el('div', { className: 'pr-btn-row' });
     var generateBtn = el('button', { className: 'btn-primary', onClick: function () {
@@ -5253,7 +5284,8 @@
           pctChange: pctChange,
           countyTier: pricing.county_tier,
           estimatedDispo: newDispo,
-          uwNotes: uw ? uw.notes : null,
+          uwNotes: (includeUwNotes && uwNotesText) ? uwNotesText : null,
+          remarks: remarksTextarea.value.trim() || null,
           photoUrls: photoUrls,
         });
         generateBtn.textContent = 'Generate Price Reduction PDF';
@@ -5277,6 +5309,30 @@
     updatePreview();
   }
 
+  function drawRebuiltLogo(doc, x, y, scale, color) {
+    // Official Rebuilt logo: 3 bars + 4 window panes, original viewBox 104.2,2 to 381.6,499.8
+    doc.setFillColor(color);
+    // Left bar
+    var pts1 = [[104.2,490.8],[185.8,409.2],[185.8,262.3],[104.2,335.7]];
+    doc.triangle(x+pts1[0][0]*scale, y+pts1[0][1]*scale, x+pts1[1][0]*scale, y+pts1[1][1]*scale, x+pts1[2][0]*scale, y+pts1[2][1]*scale, 'F');
+    doc.triangle(x+pts1[0][0]*scale, y+pts1[0][1]*scale, x+pts1[2][0]*scale, y+pts1[2][1]*scale, x+pts1[3][0]*scale, y+pts1[3][1]*scale, 'F');
+    // Right bar
+    var pts2 = [[300,2],[300,409.2],[381.6,490.7],[381.6,74.6]];
+    doc.triangle(x+pts2[0][0]*scale, y+pts2[0][1]*scale, x+pts2[1][0]*scale, y+pts2[1][1]*scale, x+pts2[2][0]*scale, y+pts2[2][1]*scale, 'F');
+    doc.triangle(x+pts2[0][0]*scale, y+pts2[0][1]*scale, x+pts2[2][0]*scale, y+pts2[2][1]*scale, x+pts2[3][0]*scale, y+pts2[3][1]*scale, 'F');
+    // Middle bar with peak
+    var pts3 = [[202.1,172.5],[202.1,392.8],[242.9,352],[283.7,392.8],[284,91.7]];
+    doc.triangle(x+pts3[0][0]*scale, y+pts3[0][1]*scale, x+pts3[1][0]*scale, y+pts3[1][1]*scale, x+pts3[2][0]*scale, y+pts3[2][1]*scale, 'F');
+    doc.triangle(x+pts3[0][0]*scale, y+pts3[0][1]*scale, x+pts3[2][0]*scale, y+pts3[2][1]*scale, x+pts3[4][0]*scale, y+pts3[4][1]*scale, 'F');
+    doc.triangle(x+pts3[2][0]*scale, y+pts3[2][1]*scale, x+pts3[3][0]*scale, y+pts3[3][1]*scale, x+pts3[4][0]*scale, y+pts3[4][1]*scale, 'F');
+    // Window panes
+    var ws = 32.6 * scale;
+    doc.rect(x+202.1*scale, y+418.2*scale, ws, ws, 'F');
+    doc.rect(x+251*scale, y+418.2*scale, ws, ws, 'F');
+    doc.rect(x+202.1*scale, y+467.2*scale, ws, ws, 'F');
+    doc.rect(x+251*scale, y+467.2*scale, ws, ws, 'F');
+  }
+
   function generateRetradePDF(d) {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'pt', format: 'letter' });
@@ -5298,18 +5354,21 @@
     doc.text(d.acqRep, 306, 420, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
     doc.text('Acquisition Representative', 306, 438, { align: 'center' });
+    // Rebuilt logo mark
+    drawRebuiltLogo(doc, 268, 650, 0.12, '#ffffff');
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text('REBUILT', 306, 700, { align: 'center' });
+    doc.text('REBUILT', 306, 720, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
-    doc.text('rebuiltllc.com', 306, 716, { align: 'center' });
+    doc.text('www.Rebuilt.com', 306, 736, { align: 'center' });
 
     // === PAGE 2: SUMMARY ===
     doc.addPage();
     doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
+    drawRebuiltLogo(doc, 38, 10, 0.06, '#ffffff');
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text('REBUILT', LM, 32);
+    doc.text('REBUILT', 72, 32);
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
-    doc.text('UNDERWRITING SUMMARY  |  PRICE ADJUSTMENT REPORT', 140, 32);
+    doc.text('UNDERWRITING SUMMARY  |  PRICE ADJUSTMENT REPORT', 158, 32);
 
     var y = 70;
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
@@ -5401,6 +5460,18 @@
       doc.text(noteLines, LM, y);
     }
 
+    // Agent remarks
+    if (d.remarks) {
+      if (y > 600) { doc.addPage(); y = 60; }
+      y += 20;
+      doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
+      doc.text('Agent Remarks', LM, y); y += 6;
+      doc.setDrawColor('#e2e8f0'); doc.setLineWidth(1); doc.line(LM, y, 562, y); y += 14;
+      doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
+      var remarkLines = doc.splitTextToSize(d.remarks, PW);
+      doc.text(remarkLines, LM, y); y += remarkLines.length * 14;
+    }
+
     // Photo pages — load images and add them
     if (d.photoUrls && d.photoUrls.length > 0) {
       var loaded = 0;
@@ -5413,10 +5484,11 @@
         for (var p = 0; p < validImgs.length; p += perPage) {
           doc.addPage();
           doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
+          drawRebuiltLogo(doc, 38, 10, 0.06, '#ffffff');
           doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-          doc.text('REBUILT', LM, 32);
+          doc.text('REBUILT', 72, 32);
           doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
-          doc.text('UNDERWRITING SUMMARY', 130, 32);
+          doc.text('UNDERWRITING SUMMARY', 148, 32);
 
           var pageNum = Math.floor(p / perPage) + 1;
           var totalPages = Math.ceil(validImgs.length / perPage);

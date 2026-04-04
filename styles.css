@@ -3338,6 +3338,24 @@ body {
   border-left: 4px solid #276749;
 }
 .pr-preview h4 { margin: 0 0 8px; font-size: 13px; color: #276749; text-transform: uppercase; }
+.pr-uw-notes-section {
+  background: var(--gray-50); border-radius: 8px; padding: 16px; margin-bottom: 20px;
+  border-left: 4px solid var(--accent);
+}
+.pr-uw-notes-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.pr-uw-notes-header h4 { margin: 0; font-size: 13px; color: var(--gray-500); text-transform: uppercase; }
+.pr-uw-check-wrap { display: flex; align-items: center; gap: 4px; }
+.pr-uw-checkbox-label { font-size: 13px; color: var(--gray-600); cursor: pointer; }
+.pr-uw-notes-text {
+  font-size: 13px; color: var(--gray-700); line-height: 1.5; white-space: pre-wrap;
+}
+.pr-remarks-input {
+  width: 100%; padding: 10px 14px; border: 2px solid var(--gray-200); border-radius: 8px;
+  font-size: 14px; font-family: inherit; box-sizing: border-box; resize: vertical;
+}
+.pr-remarks-input:focus { outline: none; border-color: var(--accent); }
 .pr-btn-row { display: flex; gap: 12px; margin-top: 20px; }
 .pr-btn-row .btn-primary { flex: 1; padding: 12px; }
 .pr-btn-row .btn-secondary { padding: 12px 20px; }
