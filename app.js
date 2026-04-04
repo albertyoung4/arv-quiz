@@ -5314,14 +5314,15 @@
   function getRebuiltLogoDataUrl(color, width, height, cb) {
     var key = color + '_' + width + '_' + height;
     if (_logoCache[key]) { cb(_logoCache[key]); return; }
-    var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="104.2 2 277.4 497.8" width="' + width + '" height="' + height + '">' +
-      '<polygon fill="' + color + '" points="104.2,490.8 185.8,409.2 185.8,262.3 104.2,335.7"/>' +
-      '<polygon fill="' + color + '" points="300,2 300,409.2 381.6,490.7 381.6,74.6"/>' +
-      '<polygon fill="' + color + '" points="202.1,172.5 202.1,392.8 242.9,352 283.7,392.8 284,91.7"/>' +
-      '<rect x="202.1" y="467.2" fill="' + color + '" width="32.6" height="32.6"/>' +
-      '<rect x="251" y="467.2" fill="' + color + '" width="32.6" height="32.6"/>' +
-      '<rect x="202.1" y="418.2" fill="' + color + '" width="32.6" height="32.6"/>' +
-      '<rect x="251" y="418.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+    // Normalize viewBox to 0,0 origin for clean canvas rendering
+    var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 277.4 497.8" width="' + width + '" height="' + height + '">' +
+      '<polygon fill="' + color + '" points="0,488.8 81.6,407.2 81.6,260.3 0,333.7"/>' +
+      '<polygon fill="' + color + '" points="195.8,0 195.8,407.2 277.4,488.7 277.4,72.6"/>' +
+      '<polygon fill="' + color + '" points="97.9,170.5 97.9,390.8 138.7,350 179.5,390.8 179.8,89.7"/>' +
+      '<rect x="97.9" y="416.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="146.8" y="416.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="97.9" y="465.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="146.8" y="465.2" fill="' + color + '" width="32.6" height="32.6"/>' +
       '</svg>';
     var img = new Image();
     img.onload = function () {
@@ -5379,7 +5380,7 @@
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
     doc.text('Acquisition Representative', 306, 438, { align: 'center' });
     // Rebuilt logo
-    addLogo(278, 650, 36, 60);
+    addLogo(281, 640, 50, 85);
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
     doc.text('REBUILT', 306, 720, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
