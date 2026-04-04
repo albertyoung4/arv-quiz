@@ -5309,31 +5309,51 @@
     updatePreview();
   }
 
-  function drawRebuiltLogo(doc, x, y, scale, color) {
-    // Official Rebuilt logo: 3 bars + 4 window panes, original viewBox 104.2,2 to 381.6,499.8
-    doc.setFillColor(color);
-    // Left bar
-    var pts1 = [[104.2,490.8],[185.8,409.2],[185.8,262.3],[104.2,335.7]];
-    doc.triangle(x+pts1[0][0]*scale, y+pts1[0][1]*scale, x+pts1[1][0]*scale, y+pts1[1][1]*scale, x+pts1[2][0]*scale, y+pts1[2][1]*scale, 'F');
-    doc.triangle(x+pts1[0][0]*scale, y+pts1[0][1]*scale, x+pts1[2][0]*scale, y+pts1[2][1]*scale, x+pts1[3][0]*scale, y+pts1[3][1]*scale, 'F');
-    // Right bar
-    var pts2 = [[300,2],[300,409.2],[381.6,490.7],[381.6,74.6]];
-    doc.triangle(x+pts2[0][0]*scale, y+pts2[0][1]*scale, x+pts2[1][0]*scale, y+pts2[1][1]*scale, x+pts2[2][0]*scale, y+pts2[2][1]*scale, 'F');
-    doc.triangle(x+pts2[0][0]*scale, y+pts2[0][1]*scale, x+pts2[2][0]*scale, y+pts2[2][1]*scale, x+pts2[3][0]*scale, y+pts2[3][1]*scale, 'F');
-    // Middle bar with peak
-    var pts3 = [[202.1,172.5],[202.1,392.8],[242.9,352],[283.7,392.8],[284,91.7]];
-    doc.triangle(x+pts3[0][0]*scale, y+pts3[0][1]*scale, x+pts3[1][0]*scale, y+pts3[1][1]*scale, x+pts3[2][0]*scale, y+pts3[2][1]*scale, 'F');
-    doc.triangle(x+pts3[0][0]*scale, y+pts3[0][1]*scale, x+pts3[2][0]*scale, y+pts3[2][1]*scale, x+pts3[4][0]*scale, y+pts3[4][1]*scale, 'F');
-    doc.triangle(x+pts3[2][0]*scale, y+pts3[2][1]*scale, x+pts3[3][0]*scale, y+pts3[3][1]*scale, x+pts3[4][0]*scale, y+pts3[4][1]*scale, 'F');
-    // Window panes
-    var ws = 32.6 * scale;
-    doc.rect(x+202.1*scale, y+418.2*scale, ws, ws, 'F');
-    doc.rect(x+251*scale, y+418.2*scale, ws, ws, 'F');
-    doc.rect(x+202.1*scale, y+467.2*scale, ws, ws, 'F');
-    doc.rect(x+251*scale, y+467.2*scale, ws, ws, 'F');
+  // Render Rebuilt logo SVG to a cached PNG data URL for PDF embedding
+  var _logoCache = {};
+  function getRebuiltLogoDataUrl(color, width, height, cb) {
+    var key = color + '_' + width + '_' + height;
+    if (_logoCache[key]) { cb(_logoCache[key]); return; }
+    var svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="104.2 2 277.4 497.8" width="' + width + '" height="' + height + '">' +
+      '<polygon fill="' + color + '" points="104.2,490.8 185.8,409.2 185.8,262.3 104.2,335.7"/>' +
+      '<polygon fill="' + color + '" points="300,2 300,409.2 381.6,490.7 381.6,74.6"/>' +
+      '<polygon fill="' + color + '" points="202.1,172.5 202.1,392.8 242.9,352 283.7,392.8 284,91.7"/>' +
+      '<rect x="202.1" y="467.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="251" y="467.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="202.1" y="418.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '<rect x="251" y="418.2" fill="' + color + '" width="32.6" height="32.6"/>' +
+      '</svg>';
+    var img = new Image();
+    img.onload = function () {
+      var c = document.createElement('canvas');
+      c.width = width * 2; c.height = height * 2;
+      var ctx = c.getContext('2d');
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      var dataUrl = c.toDataURL('image/png');
+      _logoCache[key] = dataUrl;
+      cb(dataUrl);
+    };
+    img.onerror = function () { cb(null); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgStr);
+  }
+
+  function addLogoToDoc(doc, x, y, w, h, color, then) {
+    getRebuiltLogoDataUrl(color, Math.round(w * 2), Math.round(h * 2), function (dataUrl) {
+      if (dataUrl) {
+        try { doc.addImage(dataUrl, 'PNG', x, y, w, h); } catch (_) {}
+      }
+      if (then) then();
+    });
   }
 
   function generateRetradePDF(d) {
+    // Pre-load logo before building PDF
+    getRebuiltLogoDataUrl('#ffffff', 120, 200, function (whiteLogoData) {
+      _buildRetradePDF(d, whiteLogoData);
+    });
+  }
+
+  function _buildRetradePDF(d, logoData) {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'pt', format: 'letter' });
     var PW = 512, LM = 50, DARK = '#1a202c', GRAY = '#718096', BLUE = '#1a365d', ACCENT = '#2b6cb0', GREEN = '#276749', RED = '#c53030';
@@ -5341,6 +5361,10 @@
 
     function fmtM(v) { if (v == null || isNaN(v)) return '$0'; var n = Number(v); return (n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US'); }
     function fmtMSign(v) { var n = Number(v); return (n > 0 ? '+' : n < 0 ? '-' : '') + '$' + Math.abs(n).toLocaleString('en-US'); }
+
+    function addLogo(x, y, w, h) {
+      if (logoData) { try { doc.addImage(logoData, 'PNG', x, y, w, h); } catch (_) {} }
+    }
 
     // === PAGE 1: COVER ===
     doc.setFillColor(BLUE); doc.rect(0, 0, 612, 792, 'F');
@@ -5354,8 +5378,8 @@
     doc.text(d.acqRep, 306, 420, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
     doc.text('Acquisition Representative', 306, 438, { align: 'center' });
-    // Rebuilt logo mark
-    drawRebuiltLogo(doc, 268, 650, 0.12, '#ffffff');
+    // Rebuilt logo
+    addLogo(278, 650, 36, 60);
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
     doc.text('REBUILT', 306, 720, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
@@ -5364,11 +5388,11 @@
     // === PAGE 2: SUMMARY ===
     doc.addPage();
     doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
-    drawRebuiltLogo(doc, 38, 10, 0.06, '#ffffff');
+    addLogo(40, 8, 18, 30);
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text('REBUILT', 72, 32);
+    doc.text('REBUILT', 66, 32);
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
-    doc.text('UNDERWRITING SUMMARY  |  PRICE ADJUSTMENT REPORT', 158, 32);
+    doc.text('UNDERWRITING SUMMARY  |  PRICE ADJUSTMENT REPORT', 150, 32);
 
     var y = 70;
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
@@ -5484,11 +5508,11 @@
         for (var p = 0; p < validImgs.length; p += perPage) {
           doc.addPage();
           doc.setFillColor(BLUE); doc.rect(0, 0, 612, 50, 'F');
-          drawRebuiltLogo(doc, 38, 10, 0.06, '#ffffff');
+          addLogo(40, 8, 18, 30);
           doc.setFontSize(12); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-          doc.text('REBUILT', 72, 32);
+          doc.text('REBUILT', 66, 32);
           doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
-          doc.text('UNDERWRITING SUMMARY', 148, 32);
+          doc.text('UNDERWRITING SUMMARY', 140, 32);
 
           var pageNum = Math.floor(p / perPage) + 1;
           var totalPages = Math.ceil(validImgs.length / perPage);
