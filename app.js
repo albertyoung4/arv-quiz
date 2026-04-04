@@ -4911,7 +4911,6 @@
         photoGrid.appendChild(imgWrap);
       });
       photoCard.appendChild(photoGrid);
-      centerCol.appendChild(photoCard);
     }
 
     mainGrid.appendChild(centerCol);
@@ -5009,6 +5008,11 @@
     mainGrid.appendChild(rightCol);
 
     screen.appendChild(mainGrid);
+
+    // Marketing Photos — full width below 3-column grid
+    if (photos.length > 0) {
+      screen.appendChild(photoCard);
+    }
 
     // Back button
     screen.appendChild(el('button', {
