@@ -1319,12 +1319,48 @@
   function renderLandingPage() {
     var app = clearApp();
     var screen = el('div', { className: 'screen landing-screen' });
-    screen.appendChild(el('h1', null, 'Rebuilt Training'));
-    screen.appendChild(el('p', { className: 'landing-subtitle' }, 'Choose a training program to get started.'));
+
+    // Hero
+    var hero = el('div', { className: 'landing-hero' });
+    hero.appendChild(el('h1', null, 'Rebuilt'));
+    hero.appendChild(el('p', { className: 'landing-subtitle' }, 'Training, tools, and performance tracking for the acquisition team.'));
+    screen.appendChild(hero);
+
+    var email = getEmail();
+
+    // Quick-access tool cards
+    var toolCards = [
+      { icon: '\uD83D\uDD0D', title: 'Prospect Lookup', desc: 'Search properties, view photos, generate inspection reports.', handler: function () { bootProspectLookup(); } },
+      { icon: '\uD83C\uDFE0', title: 'ARV Training', desc: 'Practice and test your comp analysis and pricing skills.', handler: function () { bootArvTraining(); } },
+      { icon: '\uD83D\uDCCA', title: 'Acq Performance', desc: 'Weekly team rankings, MPS scores, and disposition metrics.', handler: function () { navigateTo('acq-performance', 'renderPerformance'); } },
+      { icon: '\uD83C\uDFC6', title: 'Leaderboard', desc: 'See who\u2019s leading in ARV training scores.', handler: email ? function () { renderLeaderboard(); } : null },
+      { icon: '\uD83C\uDF93', title: 'Certification', desc: 'Track your progress toward ARV certification.', handler: email ? function () { renderCertificationStatus(); } : null },
+      { icon: '\uD83D\uDCCB', title: 'Score History', desc: 'Review your past quiz attempts and grades.', handler: email ? function () { renderHistory(); } : null },
+    ];
 
     var grid = el('div', { className: 'landing-grid' });
+    toolCards.forEach(function (tc) {
+      var card = el('div', {
+        className: 'landing-card' + (tc.handler ? ' landing-card-clickable' : ''),
+        onClick: tc.handler || undefined
+      });
+      card.appendChild(el('div', { className: 'landing-card-icon' }, tc.icon));
+      card.appendChild(el('h2', null, tc.title));
+      card.appendChild(el('p', { className: 'landing-card-desc' }, tc.desc));
+      if (!tc.handler) {
+        card.appendChild(el('span', { className: 'coming-soon-badge' }, 'Sign in required'));
+      }
+      grid.appendChild(card);
+    });
+    screen.appendChild(grid);
+
+    // Training programs section
+    var trainingSection = el('div', { className: 'landing-training-section' });
+    trainingSection.appendChild(el('h2', { className: 'landing-section-title' }, 'Training Programs'));
+    var trainingGrid = el('div', { className: 'landing-training-grid' });
     NAV_CONFIG.forEach(function (section) {
       if (section.disabled) return;
+      if (section.id === 'tools' || section.id === 'performance') return; // already in quick-access
       var allItems = [];
       if (section.items) allItems = section.items;
       if (section.groups) {
@@ -1333,9 +1369,9 @@
         });
       }
 
-      var card = el('div', { className: 'landing-card' });
+      var card = el('div', { className: 'landing-training-card' });
       card.appendChild(el('div', { className: 'landing-card-icon' }, section.icon));
-      card.appendChild(el('h2', null, section.label));
+      card.appendChild(el('h3', null, section.label));
 
       var list = el('ul', { className: 'landing-card-list' });
       allItems.forEach(function (item) {
@@ -1354,10 +1390,11 @@
         list.appendChild(li);
       });
       card.appendChild(list);
-      grid.appendChild(card);
+      trainingGrid.appendChild(card);
     });
+    trainingSection.appendChild(trainingGrid);
+    screen.appendChild(trainingSection);
 
-    screen.appendChild(grid);
     app.appendChild(screen);
   }
 
@@ -5444,16 +5481,7 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     renderNav();
-    // If user has ARV Training progress, boot into ARV Training directly
-    var email = getEmail();
-    if (email && (isPresentationDone() || isCompAnalysisDone())) {
-      bootArvTraining();
-    } else if (email) {
-      // Signed in but no progress - still go to ARV Training (sign-in flow)
-      bootArvTraining();
-    } else {
-      renderLandingPage();
-    }
+    renderLandingPage();
   });
 
 })();
