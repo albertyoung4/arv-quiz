@@ -3074,15 +3074,15 @@ body {
 .prospect-empty { text-align: center; padding: 48px; color: var(--gray-400); }
 
 /* Search results table */
-.prospect-results-table { border: 1px solid var(--gray-200); border-radius: 8px; overflow: hidden; }
+.prospect-results-table { border: 1px solid var(--gray-200); border-radius: 8px; overflow-x: auto; }
 .prospect-result-row {
-  display: grid; grid-template-columns: 2fr 1.2fr 0.8fr 0.8fr 0.8fr 0.8fr 0.5fr;
-  gap: 8px; padding: 10px 16px; align-items: center; font-size: 14px;
-  border-bottom: 1px solid var(--gray-100);
+  display: grid; grid-template-columns: 56px 180px 100px 120px 70px 80px 80px 80px 110px 80px 80px 60px;
+  gap: 6px; padding: 8px 12px; align-items: center; font-size: 13px;
+  border-bottom: 1px solid var(--gray-100); white-space: nowrap; min-width: max-content;
 }
 .prospect-result-row:last-child { border-bottom: none; }
 .prospect-result-header { background: var(--gray-50); font-weight: 600; color: var(--gray-500); font-size: 12px; text-transform: uppercase; }
-.prospect-result-addr { font-weight: 500; }
+.prospect-result-addr { font-weight: 500; white-space: normal; }
 .prospect-result-thumb { width: 60px; min-width: 60px; padding: 4px; }
 .prospect-thumb-img { width: 52px; height: 40px; object-fit: cover; border-radius: 4px; }
 .prospect-result-row:not(.prospect-result-header):hover { background: #f0f9ff; cursor: pointer; }
