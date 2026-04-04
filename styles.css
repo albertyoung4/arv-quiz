@@ -3140,6 +3140,9 @@ body {
   gap: 6px; padding: 8px 12px; align-items: center; font-size: 13px;
   border-bottom: 1px solid var(--gray-100);
 }
+.prospect-report-row.prospect-report-row--history {
+  grid-template-columns: 100px 1fr 160px 90px;
+}
 .prospect-report-row:last-child { border-bottom: none; }
 .prospect-report-link {
   color: var(--accent); font-weight: 600; font-size: 12px; text-decoration: none;
