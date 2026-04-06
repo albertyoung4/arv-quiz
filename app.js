@@ -5222,7 +5222,7 @@
       }
 
       previewSection.appendChild(el('h4', null, 'Preview'));
-      previewSection.appendChild(kvRow('Price Change:', pctChange + '%'));
+      previewSection.appendChild(kvRow('Price Change:', fmtDollars(Math.abs(newAcq - currentOffer))));
       previewSection.appendChild(kvRow('New Offer:', fmtDollars(newAcq)));
       previewSection.appendChild(kvRow('Adjusted Rehab:', fmtDollars(newRehab)));
       if (newDispo) previewSection.appendChild(kvRow('New Est. Disposition:', fmtDollars(newDispo)));
@@ -5487,7 +5487,7 @@
     doc.setFontSize(16); doc.setFont('helvetica', 'bold'); doc.setTextColor(GREEN);
     doc.text('New Adjusted Offer: ' + fmtM(d.newAcq), LM + 16, y + 52);
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
-    doc.text(d.pctChange + '% adjustment', LM + 380, y + 52);
+    doc.text(fmtM(Math.abs(d.newAcq - d.originalAcq)) + ' adjustment', LM + 380, y + 52);
     y += 90;
 
     // Summary table
@@ -5538,7 +5538,7 @@
       narrative += 'Additionally, estimated repair costs have been revised upward from ' + fmtM(d.originalRehab) + ' to ' + fmtM(d.newRehab) + ', reflecting updated scope and current material/labor pricing. This increase further compresses investor margins and supports the need for a lower acquisition price.\n\n';
     }
 
-    narrative += 'Rebuilt remains committed to closing this transaction and believes the adjusted offer of ' + fmtM(d.newAcq) + ' (a ' + Math.abs(d.pctChange) + '% adjustment) accurately reflects the property\'s current market value and allows both parties to move forward to a successful closing.';
+    narrative += 'Rebuilt remains committed to closing this transaction and believes the adjusted offer of ' + fmtM(d.newAcq) + ' (a ' + fmtM(Math.abs(d.newAcq - d.originalAcq)) + ' adjustment) accurately reflects the property\'s current market value and allows both parties to move forward to a successful closing.';
 
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(DARK);
     var lines = doc.splitTextToSize(narrative, PW);
