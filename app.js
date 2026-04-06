@@ -5421,13 +5421,30 @@
   }
 
   function generateRetradePDF(d, onComplete) {
-    // Pre-load logo before building PDF
+    // Pre-load logo and cover photo before building PDF
     getRebuiltLogoDataUrl('#ffffff', 120, 200, function (whiteLogoData) {
-      _buildRetradePDF(d, whiteLogoData, onComplete);
+      if (d.photoUrls && d.photoUrls.length > 0) {
+        var coverImg = new Image();
+        coverImg.crossOrigin = 'anonymous';
+        coverImg.onload = function () {
+          var canvas = document.createElement('canvas');
+          canvas.width = coverImg.naturalWidth;
+          canvas.height = coverImg.naturalHeight;
+          canvas.getContext('2d').drawImage(coverImg, 0, 0);
+          try {
+            var coverData = canvas.toDataURL('image/jpeg', 0.85);
+            _buildRetradePDF(d, whiteLogoData, coverData, onComplete);
+          } catch (_) { _buildRetradePDF(d, whiteLogoData, null, onComplete); }
+        };
+        coverImg.onerror = function () { _buildRetradePDF(d, whiteLogoData, null, onComplete); };
+        coverImg.src = d.photoUrls[0];
+      } else {
+        _buildRetradePDF(d, whiteLogoData, null, onComplete);
+      }
     });
   }
 
-  function _buildRetradePDF(d, logoData, onComplete) {
+  function _buildRetradePDF(d, logoData, coverPhotoData, onComplete) {
     var jsPDF = window.jspdf.jsPDF;
     var doc = new jsPDF({ unit: 'pt', format: 'letter' });
     var PW = 512, LM = 50, DARK = '#1a202c', GRAY = '#718096', BLUE = '#1a365d', ACCENT = '#2b6cb0', GREEN = '#276749', RED = '#c53030';
@@ -5442,16 +5459,30 @@
 
     // === PAGE 1: COVER ===
     doc.setFillColor(BLUE); doc.rect(0, 0, 612, 792, 'F');
+
+    // Cover photo
+    var coverPhotoBottom = 240;
+    if (coverPhotoData) {
+      try {
+        var cpW = 420, cpH = 260;
+        var cpX = (612 - cpW) / 2, cpY = 80;
+        // White border
+        doc.setFillColor('#ffffff'); doc.rect(cpX - 4, cpY - 4, cpW + 8, cpH + 8, 'F');
+        doc.addImage(coverPhotoData, 'JPEG', cpX, cpY, cpW, cpH);
+        coverPhotoBottom = cpY + cpH + 30;
+      } catch (_) { coverPhotoBottom = 240; }
+    }
+
     doc.setFontSize(36); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text('Inspection Report', 306, 300, { align: 'center' });
-    doc.setDrawColor('#bee3f8'); doc.setLineWidth(2); doc.line(206, 320, 406, 320);
+    doc.text('Inspection Report', 306, coverPhotoBottom + 60, { align: 'center' });
+    doc.setDrawColor('#bee3f8'); doc.setLineWidth(2); doc.line(206, coverPhotoBottom + 80, 406, coverPhotoBottom + 80);
     doc.setFontSize(16); doc.setFont('helvetica', 'normal'); doc.setTextColor('#bee3f8');
-    doc.text(d.address, 306, 350, { align: 'center', maxWidth: 500 });
-    doc.setFontSize(12); doc.setTextColor('#a0c4e8'); doc.text(dateStr, 306, 380, { align: 'center' });
+    doc.text(d.address, 306, coverPhotoBottom + 110, { align: 'center', maxWidth: 500 });
+    doc.setFontSize(12); doc.setTextColor('#a0c4e8'); doc.text(dateStr, 306, coverPhotoBottom + 140, { align: 'center' });
     doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
-    doc.text(d.acqRep, 306, 420, { align: 'center' });
+    doc.text(d.acqRep, 306, coverPhotoBottom + 180, { align: 'center' });
     doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
-    doc.text('Acquisition Representative', 306, 438, { align: 'center' });
+    doc.text('Acquisition Representative', 306, coverPhotoBottom + 198, { align: 'center' });
     doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor('#ffffff');
     doc.text('REBUILT', 306, 700, { align: 'center' });
     doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor('#a0c4e8');
