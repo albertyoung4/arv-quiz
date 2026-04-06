@@ -5553,7 +5553,7 @@
       if (y > 600) { doc.addPage(); y = 60; }
       y += 20;
       doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(DARK);
-      doc.text('Agent Remarks', LM, y); y += 6;
+      doc.text('Underwriter Remarks', LM, y); y += 6;
       doc.setDrawColor('#e2e8f0'); doc.setLineWidth(1); doc.line(LM, y, 562, y); y += 14;
       doc.setFontSize(10); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
       var remarkLines = doc.splitTextToSize(d.remarks, PW);
