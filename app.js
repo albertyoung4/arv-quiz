@@ -5507,14 +5507,6 @@
     }
     tblRow('After Repair Value (ARV)', d.originalARV, d.newARV, false);
     tblRow('Repair Estimate', d.originalRehab, d.newRehab, false);
-    tblRow('Acquisition Price', d.originalAcq, d.newAcq, true);
-
-    if (d.estimatedDispo) {
-      y += 4;
-      doc.setFontSize(9); doc.setFont('helvetica', 'normal'); doc.setTextColor(GRAY);
-      doc.text('Estimated Investor Purchase Price: ' + fmtM(d.estimatedDispo) + '   |   County Tier: ' + (d.countyTier != null ? d.countyTier : 'N/A'), LM, y);
-      y += 20;
-    }
 
     // Narrative
     y += 10;
