@@ -522,6 +522,24 @@
     { id: 'lot_size_diff',   label: 'Significantly different lot size' },
   ];
 
+  // Dynamically compute whether a comp's sale is >4 months old from today
+  function isSaleTooOld(comp) {
+    if (!comp.soldDate) return false;
+    var sold = new Date(comp.soldDate + 'T00:00:00');
+    var cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - 4);
+    return sold < cutoff;
+  }
+
+  // Return the effective issues list for a comp, with sale_too_old computed dynamically
+  function getEffectiveIssues(comp) {
+    var issues = comp.issues.filter(function (id) { return id !== 'sale_too_old'; });
+    if (isSaleTooOld(comp)) {
+      issues.push('sale_too_old');
+    }
+    return issues;
+  }
+
   var COMP_PASS_THRESHOLD = 80;
   var COMP_SCENARIOS_REQUIRED = 5;
 
@@ -1013,13 +1031,29 @@
   }
 
   function getModuleGrades() {
-    try { return JSON.parse(localStorage.getItem(STORAGE_GRADES) || '{}'); } catch (_) { return {}; }
+    try {
+      var grades = JSON.parse(localStorage.getItem(STORAGE_GRADES) || '{}');
+      // Backfill passed flag for grades saved before this field existed
+      var needsSave = false;
+      for (var key in grades) {
+        var g = grades[key];
+        if (g && typeof g.passed === 'undefined' && typeof g.arvPct === 'number') {
+          g.passed = g.arvPct <= ARV_PASS_THRESHOLD && g.renoPct <= RENO_PASS_THRESHOLD;
+          needsSave = true;
+        }
+      }
+      if (needsSave) {
+        try { localStorage.setItem(STORAGE_GRADES, JSON.stringify(grades)); } catch (_) {}
+      }
+      return grades;
+    } catch (_) { return {}; }
   }
 
   function saveModuleGrade(moduleIdx, arvPct, renoPct) {
     var grades = getModuleGrades();
     var key = String(moduleIdx);
     var newAvg = (arvPct + renoPct) / 2;
+    var passed = arvPct <= ARV_PASS_THRESHOLD && renoPct <= RENO_PASS_THRESHOLD;
     var existing = grades[key];
     // Save if first attempt or better than previous best
     if (!existing || newAvg < (existing.arvPct + existing.renoPct) / 2) {
@@ -1029,10 +1063,25 @@
         arvGrade: letterGrade(arvPct),
         renoGrade: letterGrade(renoPct),
         overallGrade: letterGrade(newAvg),
+        passed: passed,
         timestamp: new Date().toISOString()
       };
     }
+    // If this attempt passed, always mark passed even if score wasn't a new best
+    if (passed && existing && !existing.passed) {
+      grades[key].passed = true;
+    }
     try { localStorage.setItem(STORAGE_GRADES, JSON.stringify(grades)); } catch (_) {}
+  }
+
+  // Check if all test-out modules (indices 4-7) have been passed
+  function allTestOutPassed() {
+    var grades = getModuleGrades();
+    var TESTOUT_INDICES = [4, 5, 6, 7];
+    return TESTOUT_INDICES.every(function (idx) {
+      var g = grades[String(idx)];
+      return g && g.passed;
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -2058,8 +2107,7 @@
       renderCompIntro();
     } else {
       loadProperties().then(function () {
-        var progress = getProgress();
-        if (progress.completedModules.length >= MODULES_COUNT) {
+        if (allTestOutPassed()) {
           renderDiploma();
         } else {
           renderDashboard();
@@ -2623,7 +2671,7 @@
 
     // Admin answer highlighting
     if (isAdmin()) {
-      var correctIssueIds = comp.issues;
+      var correctIssueIds = getEffectiveIssues(comp);
       var isGood = correctIssueIds.length === 0;
       var adminBanner = el('div', { className: 'admin-answer-banner' },
         el('span', { className: 'admin-answer-icon' }, '\uD83D\uDD11'),
@@ -2665,7 +2713,7 @@
 
       compSubmitted = true;
       var userIssues = goodCompSelected ? [] : checkedIds;
-      var correctIssues = comp.issues;
+      var correctIssues = getEffectiveIssues(comp);
       var allIssueIds = COMP_ISSUES.map(function (i) { return i.id; });
       var correct = 0;
       var total = allIssueIds.length + 1;
@@ -2731,7 +2779,7 @@
         el('span', { className: r.score >= 80 ? 'text-good' : 'text-bad' }, r.score.toFixed(0) + '%')
       ));
 
-      var isGoodComp = r.comp.issues.length === 0;
+      var isGoodComp = getEffectiveIssues(r.comp).length === 0;
       if (isGoodComp) {
         compDiv.appendChild(el('p', { className: 'comp-result-answer ' + (r.goodCompSelected ? 'text-good' : 'text-bad') },
           r.goodCompSelected ? '\u2713 Correctly identified as good comp' : '\u2717 This was actually a good comp'
@@ -2744,7 +2792,7 @@
         }
         var issueList = el('div', { className: 'comp-result-issues' });
         COMP_ISSUES.forEach(function (issue) {
-          var shouldCheck = r.comp.issues.indexOf(issue.id) !== -1;
+          var shouldCheck = getEffectiveIssues(r.comp).indexOf(issue.id) !== -1;
           var didCheck = r.userIssues.indexOf(issue.id) !== -1;
           if (shouldCheck || didCheck) {
             var icon, explain;
@@ -2868,34 +2916,43 @@
 
     var progress = getProgress();
     var completed = progress.completedModules;
-    var level = completed.length;
-    var info = LEVELS[Math.min(level, LEVELS.length - 1)];
     var grades = getModuleGrades();
 
-    // Check if test out modules (5-8 = indices 4-7) are all passed
-    var TESTOUT_INDICES = [4, 5, 6, 7];
-    var testOutPassed = TESTOUT_INDICES.every(function (idx) {
-      return completed.indexOf(idx) !== -1;
-    });
-    if (testOutPassed) {
+    // Check if test out modules (5-8 = indices 4-7) are all passed (not just attempted)
+    if (allTestOutPassed()) {
       renderDiploma();
       return;
     }
+
+    // Count modules that are truly "done" — practice: attempted, test-out: passed
+    var doneCount = 0;
+    for (var dc = 0; dc < MODULES_COUNT; dc++) {
+      if (dc < PRACTICE_MODULE_COUNT) {
+        if (completed.indexOf(dc) !== -1) doneCount++;
+      } else {
+        var g = grades[String(dc)];
+        if (g && g.passed) doneCount++;
+      }
+    }
+    var info = LEVELS[Math.min(doneCount, LEVELS.length - 1)];
 
     // Level banner
     var banner = el('div', { className: 'dash-banner' });
     banner.appendChild(el('div', { className: 'dash-level-emoji' }, info.emoji));
     banner.appendChild(el('h1', { className: 'dash-level-name' }, info.name));
-    banner.appendChild(el('p', { className: 'dash-level-sub' }, level + ' of ' + MODULES_COUNT + ' modules completed'));
+    banner.appendChild(el('p', { className: 'dash-level-sub' }, doneCount + ' of ' + MODULES_COUNT + ' modules completed'));
     screen.appendChild(banner);
 
     // Global progress bar
     var pbar = el('div', { className: 'dash-progress' });
     for (var p = 0; p < MODULES_COUNT; p++) {
+      var segDone = p < PRACTICE_MODULE_COUNT
+        ? completed.indexOf(p) !== -1
+        : (grades[String(p)] && grades[String(p)].passed);
       var seg = el('div', {
         className: 'dash-progress-seg' +
-          (completed.indexOf(p) !== -1 ? ' seg-complete' : '') +
-          (p === level ? ' seg-current' : ''),
+          (segDone ? ' seg-complete' : '') +
+          (p === doneCount ? ' seg-current' : ''),
       });
       seg.appendChild(el('span', null, String(p + 1)));
       pbar.appendChild(seg);
@@ -2927,15 +2984,17 @@
       var gradeData = grades[String(moduleIdx)];
       var isPractice = moduleIdx < PRACTICE_MODULE_COUNT;
 
+      var showComplete = isPractice ? isCompleted : modulePassed;
       var card = el('div', {
         className: 'dash-module-card' +
-          (isCompleted ? ' mod-complete' : '') +
+          (showComplete ? ' mod-complete' : '') +
           (isPractice ? ' mod-practice' : ' mod-testout'),
       });
       card.style.cursor = 'pointer';
       card.addEventListener('click', function () { startModule(moduleIdx); });
 
-      var icon = isCompleted ? '\u2705' : '\uD83D\uDCCB';
+      var modulePassed = gradeData && gradeData.passed;
+      var icon = modulePassed ? '\u2705' : isCompleted ? '\u274C' : '\uD83D\uDCCB';
       card.appendChild(el('div', { className: 'mod-icon' }, icon));
       card.appendChild(el('div', { className: 'mod-number' }, (isPractice ? 'Practice ' : 'Test ') + (isPractice ? (moduleIdx + 1) : (moduleIdx - PRACTICE_MODULE_COUNT + 1))));
       card.appendChild(el('div', { className: 'mod-questions' }, getModuleQuestionCount(moduleIdx) + ' properties'));
@@ -2946,7 +3005,11 @@
           el('span', { className: 'mod-grade-detail' }, 'ARV: ' + gradeData.arvPct + '% | Reno: ' + gradeData.renoPct + '%')
         );
         card.appendChild(gradeEl);
-        card.appendChild(el('div', { className: 'mod-status mod-status-retake' }, '\uD83D\uDD01 Retake'));
+        if (modulePassed) {
+          card.appendChild(el('div', { className: 'mod-status mod-status-pass' }, '\u2713 Passed'));
+        } else {
+          card.appendChild(el('div', { className: 'mod-status mod-status-retake' }, '\uD83D\uDD01 Retake'));
+        }
       } else {
         card.appendChild(el('div', { className: 'mod-status mod-status-ready' }, 'Ready'));
       }
@@ -3739,14 +3802,14 @@
     btnRow.appendChild(el('button', {
       className: 'btn-secondary',
       onClick: function () {
-        // Reset and go back to dashboard
+        // Reset progress but preserve grades (pass history stays intact)
         var progress = getProgress();
         progress.completedModules = [];
         saveProgress(progress);
         try { localStorage.removeItem(STORAGE_PROP_ORDER); } catch (_) {}
         try { localStorage.removeItem(STORAGE_COMP_DONE); } catch (_) {}
         try { localStorage.removeItem(STORAGE_SLACK_POSTED); } catch (_) {}
-        try { localStorage.removeItem(STORAGE_GRADES); } catch (_) {}
+        // Re-shuffle properties but keep grade records so pass status is preserved
         renderDashboard();
       }
     }, '\uD83D\uDD04 Reset & Start Over'));
